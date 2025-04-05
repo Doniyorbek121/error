@@ -10,3 +10,4 @@ services:
   buildCommand: pip install --upgrade pip && pip install -r requirements.txt  # Pipni yangilash va paketlarni o'rnatish
   startCommand: python bot.py  # Botni ishga tushirish buyrug'i (fayl nomiga moslashtiring)
 version: "1"
+BOT_TOKEN=7253489362:AAED1JWz195gwPLp6aKk6_zGOxOknwRMNbM
