@@ -1,7 +1,15 @@
 pyTelegramBotAPI==4.12.0
 requests==2.31.0
 telebot
-requests
 python-telegram-bot
 flask
 requests
+python-telegram-bot==20.8
+python-telegram-bot==20.8
+requests==2.32.3
+python-telegram-bot==20.8
+requests==2.32.3
+httpx==0.27.0
+httpcore==1.0.5
+python-telegram-bot==20.8
+requests==2.32.3
