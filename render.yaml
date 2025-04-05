@@ -1,0 +1,12 @@
+# Render konfiguratsiyasi
+services:
+- type: web
+  name: xato-bot  # Xizmat nomini o'zgartirdim, "error" o'rniga "xato-bot" qo'ydim
+  runtime: python  # Statik emas, Python runtime ishlatamiz
+  repo: https://github.com/Doniyorbek121/error  # Sizning repository manzilingiz
+  envVars:
+  - key: BOT_TOKEN
+    sync: false  # BOT_TOKEN ni Render dashboard orqali qo'lda kiritasiz
+  buildCommand: pip install --upgrade pip && pip install -r requirements.txt  # Pipni yangilash va paketlarni o'rnatish
+  startCommand: python bot.py  # Botni ishga tushirish buyrug'i (fayl nomiga moslashtiring)
+version: "1"
