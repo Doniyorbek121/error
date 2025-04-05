@@ -1,0 +1,7 @@
+pyTelegramBotAPI==4.12.0
+requests==2.31.0
+telebot
+requests
+python-telegram-bot
+flask
+requests
