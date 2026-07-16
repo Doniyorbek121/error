@@ -43,6 +43,16 @@ Savdo ochilganda va yopilganda **alert** (ekranda) va ixtiyoriy **push** (telefo
 yuboriladi. Push ishlashi uchun MT5 → Tools → Options → Notifications da MetaQuotes ID
 kiritilgan bo'lishi kerak.
 
+### Kunlik himoya (daily guard)
+Robotni yomon kundan saqlaydigan qatlam. Har yangi kun (server vaqti) hisoblagichlar
+nolga qaytadi. Yangi savdo quyidagi hollarda **to'xtatiladi**:
+- **Kunlik savdo limiti** — `InpMaxTradesPerDay` ta savdo ochilib bo'lsa (0 = cheksiz).
+- **Kunlik zarar limiti** — equity kun boshidagi qiymatdan `InpDailyLossPct` % ga tushsa.
+
+To'xtatilganda bir marta **alert** yuboriladi va panelda **Bugun** qatorida `• STOP`
+ko'rsatiladi. Ochiq pozitsiya bosqichma-bosqich boshqarilishda davom etadi — himoya faqat
+**yangi** kirishni bloklaydi.
+
 ### Asosiy parametrlar
 
 | Parametr | Izoh | Standart |
@@ -54,6 +64,9 @@ kiritilgan bo'lishi kerak.
 | `InpUseTrendEMA` / `InpTrendEMA` | EMA trend filtri | true / 200 |
 | `InpMaxSpreadPts` | Maksimal spread (punkt) | 30 |
 | `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
+| `InpUseDailyGuard` | Kunlik himoya (limitlar) yoqilsinmi | true |
+| `InpMaxTradesPerDay` | Bir kunda maks. savdo (0 = cheksiz) | 3 |
+| `InpDailyLossPct` | Kunlik maks. zarar (% equity, 0 = o'chiq) | 3.0 |
 | `InpShowPanel` | Grafikda info-panel (dashboard) | true |
 | `InpShowEntryArrows` | Kirish strelkalarini chizish | true |
 | `InpAlertPopup` / `InpAlertPush` | Alert / telefonga push | true / false |

@@ -32,6 +32,11 @@ input bool   InpUseSession     = false;    // Vaqt filtri yoqilsinmi
 input int    InpStartHour      = 7;        // Boshlanish soati
 input int    InpEndHour        = 21;       // Tugash soati
 
+input group "=== Kunlik himoya ==="
+input bool   InpUseDailyGuard   = true;    // Kunlik himoya yoqilsinmi
+input int    InpMaxTradesPerDay = 3;       // Bir kunda maks. savdo (0 = cheksiz)
+input double InpDailyLossPct     = 3.0;    // Kunlik maks. zarar (% equity, 0 = o'chirilgan)
+
 input group "=== Risk-menejment ==="
 input double InpRiskPercent    = 1.0;      // Har savdoda risk (% balans)
 input double InpFixedLot       = 0.0;      // >0 bo'lsa risk o'rniga qat'iy lot
@@ -98,6 +103,12 @@ bool     zoneRetested = false;// faol zona retest bo'ldimi
 string   zoneState = "NONE";  // panel uchun: NONE/BULL/BEAR/RETEST/BROKEN
 bool     prevHasPos = false;  // pozitsiya yopilishini aniqlash uchun
 
+// kunlik himoya hisoblagichlari
+int      dayNum         = -1;   // joriy savdo kuni (yil*1000 + kun)
+double   dayStartEquity = 0.0;  // kun boshidagi equity
+int      dayTrades      = 0;    // shu kun ochilgan savdolar soni
+bool     dayHaltNotified = false; // kunlik STOP haqida bir marta ogohlantirish
+
 //+------------------------------------------------------------------+
 int OnInit()
   {
@@ -117,6 +128,8 @@ int OnInit()
 
    if(InpRiskPercent <= 0 && InpFixedLot <= 0)
       Print("Ogohlantirish: Risk% va Fixed lot ikkalasi ham 0. Savdo ochilmaydi.");
+
+   RollDay(); // kunlik hisoblagichlarni ishga tushiramiz
 
    return(INIT_SUCCEEDED);
   }
@@ -307,7 +320,7 @@ void UpdatePanel()
    int rh = 16;                 // qator balandligi
    int vx = x0 + 118;           // qiymat ustuni
 
-   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 10 + 14);
+   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 11 + 14);
 
    // trend
    string trTxt = trendDir == 1 ? "BULL" : trendDir == -1 ? "BEAR" : "—";
@@ -363,6 +376,22 @@ void UpdatePanel()
    SetPanelLabel("v7", vx, y0 + rh*r, DoubleToString(InpRiskPercent, 1) + " %", clrWhite, 8); r++;
    SetPanelLabel("k8", x0, y0 + rh*r, "Algo Trading", clrSilver, 8);
    SetPanelLabel("v8", vx, y0 + rh*r, algo ? "ON" : "OFF", algo ? clrLime : clrTomato, 8); r++;
+
+   // bugungi savdo va kunlik himoya holati
+   string dayTxt;
+   color  dayCol = clrSilver;
+   if(!InpUseDailyGuard)
+      dayTxt = "o'chiq";
+   else
+     {
+      dayTxt = IntegerToString(dayTrades);
+      if(InpMaxTradesPerDay > 0) dayTxt += "/" + IntegerToString(InpMaxTradesPerDay);
+      dayTxt += " savdo";
+      if(!DailyGuardOK()) { dayTxt += " • STOP"; dayCol = clrTomato; }
+      else                dayCol = clrWhite;
+     }
+   SetPanelLabel("k9", x0, y0 + rh*r, "Bugun", clrSilver, 8);
+   SetPanelLabel("v9", vx, y0 + rh*r, dayTxt, dayCol, 8); r++;
   }
 //+------------------------------------------------------------------+
 //| Panel obyektlarini o'chirish                                     |
@@ -461,6 +490,39 @@ bool SessionOK()
    return(t.hour >= InpStartHour || t.hour < InpEndHour); // tunni qamrab olsa
   }
 //+------------------------------------------------------------------+
+//| Yangi kun boshlansa hisoblagichlarni nolga qaytarish             |
+void RollDay()
+  {
+   MqlDateTime t;
+   TimeToStruct(TimeCurrent(), t);
+   int today = t.year * 1000 + t.day_of_year;
+   if(today != dayNum)
+     {
+      dayNum          = today;
+      dayStartEquity  = AccountInfoDouble(ACCOUNT_EQUITY);
+      dayTrades       = 0;
+      dayHaltNotified = false;
+     }
+  }
+//+------------------------------------------------------------------+
+//| Kunlik zarar limiti oshib ketdimi                                |
+bool DailyLossHit()
+  {
+   if(!InpUseDailyGuard || InpDailyLossPct <= 0.0 || dayStartEquity <= 0.0)
+      return(false);
+   double eq = AccountInfoDouble(ACCOUNT_EQUITY);
+   return(eq <= dayStartEquity * (1.0 - InpDailyLossPct / 100.0));
+  }
+//+------------------------------------------------------------------+
+//| Bugun yangi savdoga ruxsat bormi                                 |
+bool DailyGuardOK()
+  {
+   if(!InpUseDailyGuard) return(true);
+   if(InpMaxTradesPerDay > 0 && dayTrades >= InpMaxTradesPerDay) return(false);
+   if(DailyLossHit()) return(false);
+   return(true);
+  }
+//+------------------------------------------------------------------+
 //| strukturani yangilash va zonani aniqlash                         |
 void UpdateStructure()
   {
@@ -523,6 +585,7 @@ void CheckEntry()
    if(!zoneActive || zoneTraded) return;
    if(HasPosition())            return;
    if(!SpreadOK() || !SessionOK()) return;
+   if(!DailyGuardOK())          return;
 
    double atr = GetAtr();
    if(atr <= 0.0) return;
@@ -560,6 +623,7 @@ void CheckEntry()
          if(trade.Buy(lots, _Symbol, 0.0, sl, tp, InpComment))
            {
             zoneTraded = true;
+            dayTrades++;
             DrawEntryArrow(true, ask);
             Notify(StringFormat("SMC BUY %s @ %s | SL %s | TP %s | %.2f lot",
                    _Symbol, DoubleToString(ask,_Digits),
@@ -590,6 +654,7 @@ void CheckEntry()
          if(trade.Sell(lots, _Symbol, 0.0, sl, tp, InpComment))
            {
             zoneTraded = true;
+            dayTrades++;
             DrawEntryArrow(false, bid);
             Notify(StringFormat("SMC SELL %s @ %s | SL %s | TP %s | %.2f lot",
                    _Symbol, DoubleToString(bid,_Digits),
@@ -673,6 +738,17 @@ void OnTick()
    if(prevHasPos && !nowPos)
       Notify("SMC: pozitsiya yopildi | " + _Symbol);
    prevHasPos = nowPos;
+
+   // kunlik hisoblagichlarni yangilash (yangi kun boshlansa nolga qaytadi)
+   RollDay();
+
+   // kunlik himoya ishga tushsa bir marta ogohlantiramiz
+   if(InpUseDailyGuard && !dayHaltNotified && !DailyGuardOK())
+     {
+      dayHaltNotified = true;
+      string why = DailyLossHit() ? "kunlik zarar limiti" : "kunlik savdo limiti";
+      Notify(StringFormat("SMC: bugun yangi savdo TO'XTATILDI (%s) | %s", why, _Symbol));
+     }
 
    // panelni har tikda yangilaymiz
    UpdatePanel();
