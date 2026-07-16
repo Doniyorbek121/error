@@ -50,6 +50,7 @@ input bool   InpDrawZones      = true;     // Zonalarni grafikda chizish
 input color  InpBullZoneColor  = clrTeal;  // Bull (demand) zona rangi
 input color  InpBearZoneColor  = clrCrimson; // Bear (supply) zona rangi
 input color  InpRetestColor    = clrGold;  // Retest bo'lgan zona rangi
+input color  InpBrokenColor    = clrGray;  // Buzilgan (invalid) zona rangi
 input int    InpZoneExtendBars = 30;       // Zonani o'ngga uzaytirish (bar)
 input int    InpMaxDrawZones   = 12;       // Grafikda saqlanadigan zonalar soni
 input bool   InpZoneFill       = true;     // Zonani to'ldirish (fon)
@@ -153,6 +154,31 @@ void CheckRetest()
       ObjectSetInteger(0, activeZoneName, OBJPROP_COLOR, InpRetestColor);
       zoneRetested = true;
       ChartRedraw(0);
+     }
+  }
+//+------------------------------------------------------------------+
+//| Zona buzilsa (narx zonadan qarshi tomonga yopilsa) kulrang qilish|
+void CheckInvalidation()
+  {
+   if(!zoneActive) return;
+
+   double c1 = iClose(_Symbol, _Period, 1); // oxirgi yopilgan bar
+
+   bool broken = false;
+   if(trendDir == 1 && c1 < zoneLo)       // bull demand zona pastdan buzildi
+      broken = true;
+   else if(trendDir == -1 && c1 > zoneHi) // bear supply zona yuqoridan buzildi
+      broken = true;
+
+   if(broken)
+     {
+      if(InpDrawZones && activeZoneName != "" && ObjectFind(0, activeZoneName) >= 0)
+        {
+         ObjectSetInteger(0, activeZoneName, OBJPROP_COLOR, InpBrokenColor);
+         ObjectSetInteger(0, activeZoneName, OBJPROP_FILL, false);
+         ChartRedraw(0);
+        }
+      zoneActive = false; // buzilgan zonaga endi kirmaymiz
      }
   }
 //+------------------------------------------------------------------+
@@ -480,6 +506,7 @@ void OnTick()
    if(Bars(_Symbol, _Period) < InpTrendEMA + InpSwing + 10) return;
 
    UpdateStructure();
+   CheckInvalidation();
    CheckRetest();
    CheckEntry();
    if(InpDrawZones) ExtendLastZone();

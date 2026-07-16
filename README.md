@@ -29,7 +29,9 @@ Aniqlangan **Order Block zonalar** grafikda to'rtburchak (rectangle) sifatida ch
 bull (demand) yashil, bear (supply) qizil. Zonalar o'ngga proyeksiya qilinadi va soni
 `InpMaxDrawZones` bilan cheklanadi. Narx zonaga qaytib **teganda (retest)** zona rangi
 `InpRetestColor` (oltin) ga o'zgaradi — ishlatilgan zonani darhol ajratib ko'rsatadi.
-Vizualni `InpDrawZones = false` bilan o'chirsa bo'ladi.
+Narx zonani **qarshi tomonga buzib yopsa (invalidatsiya)** zona `InpBrokenColor`
+(kulrang) ga o'zgaradi va u zonaga endi kirilmaydi. Vizualni `InpDrawZones = false`
+bilan o'chirsa bo'ladi.
 
 ### Asosiy parametrlar
 
@@ -45,6 +47,7 @@ Vizualni `InpDrawZones = false` bilan o'chirsa bo'ladi.
 | `InpDrawZones` | Zonalarni grafikda chizish | true |
 | `InpBullZoneColor` / `InpBearZoneColor` | Zona ranglari | Teal / Crimson |
 | `InpRetestColor` | Retest bo'lgan zona rangi | Gold |
+| `InpBrokenColor` | Buzilgan (invalid) zona rangi | Gray |
 | `InpZoneExtendBars` | Zonani o'ngga uzaytirish (bar) | 30 |
 | `InpMaxDrawZones` | Grafikda saqlanadigan zonalar soni | 12 |
 
