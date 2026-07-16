@@ -1,38 +1,67 @@
-# BuySellSignal — MT5 indikatori
+# MT5 Trading Tools
 
-MetaTrader 5 uchun **Buy/Sell signal** indikatori. Ikki EMA (tez va sekin)
-kesishuvi asosida grafikda strelkalar chizadi va bildirishnoma yuboradi.
+MetaTrader 5 uchun ikkita fayl:
 
-## Signal mantig'i
+| Fayl | Turi | Vazifasi |
+|---|---|---|
+| `BuySellSignal.mq5` | **Indikator** | EMA kesishuvi asosida grafikda Buy/Sell strelka signallari (savdo ochmaydi). |
+| `SMC_AutoTrader.mq5` | **Expert Advisor (EA)** | Smart Money Concepts strategiyasi bilan **avtomatik** savdo ochadi/yopadi. |
 
-- **Buy (yashil strelka, pastda)** — tez EMA sekin EMAni **pastdan yuqoriga** kesib o'tganda.
-- **Sell (qizil strelka, tepada)** — tez EMA sekin EMAni **yuqoridan pastga** kesib o'tganda.
+---
 
-Strelka masofasi ATR asosida hisoblanadi, shuning uchun har qanday instrument/timeframe da to'g'ri joylashadi.
+## ⚠️ Muhim ogohlantirish (o'qing)
 
-## Kirish parametrlari
+- `SMC_AutoTrader.mq5` — bu **avto-savdo roboti**. U real pul bilan pozitsiya ochadi va yopadi.
+- **Hech qanday foyda kafolati YO'Q.** Sifatli kod foydani kafolatlamaydi.
+- **Har doim avval DEMO hisobda** kamida bir necha hafta sinang. Faqat natijani tushunib, ishonch hosil qilgandan keyin real hisobga o'tng.
+- Standart risk `1%` qilib qo'yilgan — o'zingizga mos sozlang.
+
+---
+
+## SMC_AutoTrader — strategiya
+
+1. **Market Structure** — swing high/low aniqlanadi, narx ularni buzsa (BOS = Break of Structure) trend yo'nalishi belgilanadi.
+2. **Order Block / zona** — BOS dan oldingi swing shami zona sifatida saqlanadi.
+3. **Kirish** — narx trend yo'nalishida shu zonaga qaytib (retest) tasdiq shami bergganda savdo ochiladi.
+4. **Chiqish** — SL/TP, ixtiyoriy Break-Even va Trailing Stop.
+
+### Asosiy parametrlar
 
 | Parametr | Izoh | Standart |
 |---|---|---|
-| `InpFastPeriod` | Tez EMA davri | 9 |
-| `InpSlowPeriod` | Sekin EMA davri | 21 |
-| `InpMaMethod` | MA metodi (EMA/SMA/...) | EMA |
-| `InpAppliedPrice` | Qo'llaniladigan narx | Close |
-| `InpArrowGap` | Strelka masofasi (ATR ulushi) | 1.0 |
-| `InpAtrPeriod` | ATR davri | 14 |
-| `InpAlertPopup` | Ekranda alert | true |
-| `InpAlertPush` | Telefonga push | false |
-| `InpAlertEmail` | Email yuborish | false |
+| `InpRiskPercent` | Har savdoda risk (% balans) | 1.0 |
+| `InpFixedLot` | >0 bo'lsa risk o'rniga qat'iy lot | 0.0 |
+| `InpRewardRR` | TP = RR × risk masofasi | 2.0 |
+| `InpSwing` | Swing kuchi (bar soni) | 5 |
+| `InpUseTrendEMA` / `InpTrendEMA` | EMA trend filtri | true / 200 |
+| `InpMaxSpreadPts` | Maksimal spread (punkt) | 30 |
+| `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
+
+---
 
 ## O'rnatish
 
-1. MetaTrader 5 da **File → Open Data Folder** ni bosing.
-2. `MQL5/Indicators/` papkasiga `BuySellSignal.mq5` faylini nusxalang.
-3. **MetaEditor** da faylni oching va **Compile** (F7) qiling.
-4. MT5 da **Navigator → Indicators** dan indikatorni grafikka tashlang.
+### Indikator (`BuySellSignal.mq5`)
+1. MT5 → **File → Open Data Folder**
+2. `MQL5/Indicators/` ga nusxalang
+3. MetaEditor da oching → **F7** (Compile)
+4. Navigator → Indicators dan grafikga tashlang
 
-## Eslatma
+### Expert Advisor (`SMC_AutoTrader.mq5`)
+1. MT5 → **File → Open Data Folder**
+2. `MQL5/Experts/` ga nusxalang
+3. MetaEditor da oching → **F7** (Compile)
+4. Grafikga tashlang, **Options → Expert Advisors → Allow Algo Trading** yoqilgan bo'lsin
+5. Yuqoridagi **Algo Trading** tugmasi yashil bo'lishi kerak
 
-Signallar oxirgi **yopilgan bar** da tasdiqlanadi (qayta bo'yalishning oldini olish uchun
-bildirishnoma yopilgan barga qarab yuboriladi). Har qanday strategiyani real hisobda
-ishlatishdan oldin demo hisobda sinab ko'ring.
+### Test (majburiy)
+- MT5 → **View → Strategy Tester** → EA ni tanlang → tarixiy ma'lumotda tekshiring.
+- Keyin **DEMO hisobda** real vaqtda kuzating.
+
+---
+
+## Eslatma: TradingView indikatorlari haqida
+
+TradingView (Pine Script) indikatorlarini MT5 ga to'g'ridan-to'g'ri qo'yib bo'lmaydi —
+ular boshqa til va platforma. Ularning mantig'ini MQL5 da qaytadan yozish kerak. Bu repodagi
+fayllar aynan shunday — MT5 uchun mustaqil yozilgan.
