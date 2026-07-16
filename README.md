@@ -21,6 +21,7 @@ MetaTrader 5 uchun ikkita fayl:
 ## SMC_AutoTrader — strategiya
 
 1. **Market Structure** — swing high/low aniqlanadi, narx ularni buzsa (BOS = Break of Structure) trend yo'nalishi belgilanadi.
+0. **Multi-timeframe filtri** — savdo faqat **yuqori TF** (masalan H1) trendi bilan **bir yo'nalishda** ochiladi. Yuqori TF trendi HTF EMA'ga nisbatan narx holati bilan aniqlanadi. Bu qarama-qarshi (counter-trend) savdolarni kamaytiradi.
 2. **Order Block / zona** — BOS dan oldingi swing shami zona sifatida saqlanadi.
 3. **Kirish** — narx trend yo'nalishida shu zonaga qaytib (retest) tasdiq shami bergganda savdo ochiladi.
 4. **Chiqish** — SL/TP, ixtiyoriy Break-Even va Trailing Stop.
@@ -52,6 +53,8 @@ kiritilgan bo'lishi kerak.
 | `InpRewardRR` | TP = RR × risk masofasi | 2.0 |
 | `InpSwing` | Swing kuchi (bar soni) | 5 |
 | `InpUseTrendEMA` / `InpTrendEMA` | EMA trend filtri | true / 200 |
+| `InpUseMTF` | Yuqori TF trend filtri | true |
+| `InpHTF` / `InpHTFema` | Yuqori timeframe va uning EMA davri | H1 / 50 |
 | `InpMaxSpreadPts` | Maksimal spread (punkt) | 30 |
 | `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
 | `InpShowPanel` | Grafikda info-panel (dashboard) | true |

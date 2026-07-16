@@ -27,6 +27,11 @@ input bool   InpUseTrendEMA    = true;     // EMA trend filtri yoqilsinmi
 input int    InpTrendEMA       = 200;      // Trend EMA davri
 input int    InpMaxSpreadPts   = 30;       // Maksimal spread (punkt); 0 = tekshirilmaydi
 
+input group "=== Multi-timeframe (yuqori TF filtri) ==="
+input bool             InpUseMTF   = true;         // Yuqori TF trend filtri yoqilsinmi
+input ENUM_TIMEFRAMES  InpHTF      = PERIOD_H1;    // Yuqori timeframe
+input int              InpHTFema   = 50;           // Yuqori TF EMA davri
+
 input group "=== Savdo vaqti (server vaqti) ==="
 input bool   InpUseSession     = false;    // Vaqt filtri yoqilsinmi
 input int    InpStartHour      = 7;        // Boshlanish soati
@@ -68,8 +73,10 @@ input bool   InpAlertPush      = false;    // Telefonga push (MT5 sozlamasi kera
 
 //====================== GLOBAL O'ZGARUVCHILAR =====================
 CTrade   trade;
-int      hAtr   = INVALID_HANDLE;
-int      hEma   = INVALID_HANDLE;
+int      hAtr    = INVALID_HANDLE;
+int      hEma    = INVALID_HANDLE;
+int      hHtfEma = INVALID_HANDLE;
+int      htfBias = 0;          // yuqori TF trend: 1 bull, -1 bear, 0 neytral
 
 datetime lastBarTime = 0;
 
@@ -108,8 +115,11 @@ int OnInit()
    hAtr = iATR(_Symbol, _Period, InpAtrPeriod);
    if(InpUseTrendEMA)
       hEma = iMA(_Symbol, _Period, InpTrendEMA, 0, MODE_EMA, PRICE_CLOSE);
+   if(InpUseMTF)
+      hHtfEma = iMA(_Symbol, InpHTF, InpHTFema, 0, MODE_EMA, PRICE_CLOSE);
 
-   if(hAtr == INVALID_HANDLE || (InpUseTrendEMA && hEma == INVALID_HANDLE))
+   if(hAtr == INVALID_HANDLE || (InpUseTrendEMA && hEma == INVALID_HANDLE) ||
+      (InpUseMTF && hHtfEma == INVALID_HANDLE))
      {
       Print("Indikator handllarini yaratib bo'lmadi.");
       return(INIT_FAILED);
@@ -125,6 +135,7 @@ void OnDeinit(const int reason)
   {
    if(hAtr != INVALID_HANDLE) IndicatorRelease(hAtr);
    if(hEma != INVALID_HANDLE) IndicatorRelease(hEma);
+   if(hHtfEma != INVALID_HANDLE) IndicatorRelease(hHtfEma);
    DeleteAllZones();
    DeletePanel();
    ObjectsDeleteAll(0, ARR_PREFIX);
@@ -307,11 +318,20 @@ void UpdatePanel()
    int rh = 16;                 // qator balandligi
    int vx = x0 + 118;           // qiymat ustuni
 
-   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 10 + 14);
+   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 11 + 14);
 
    // trend
    string trTxt = trendDir == 1 ? "BULL" : trendDir == -1 ? "BEAR" : "—";
    color  trCol = trendDir == 1 ? clrLime : trendDir == -1 ? clrTomato : clrSilver;
+
+   // yuqori TF trend
+   string htfTxt = !InpUseMTF ? "off"
+                   : htfBias == 1 ? "BULL"
+                   : htfBias == -1 ? "BEAR" : "—";
+   color  htfCol = !InpUseMTF ? clrGray
+                   : htfBias == 1 ? clrLime
+                   : htfBias == -1 ? clrTomato : clrSilver;
+   string htfTf  = StringSubstr(EnumToString(InpHTF), 7);
 
    // zona holati rangi
    color zCol = clrSilver;
@@ -351,6 +371,8 @@ void UpdatePanel()
    SetPanelLabel("v1", vx, y0 + rh*r, _Symbol + " " + tf, clrWhite, 8); r++;
    SetPanelLabel("k2", x0, y0 + rh*r, "Trend", clrSilver, 8);
    SetPanelLabel("v2", vx, y0 + rh*r, trTxt, trCol, 8); r++;
+   SetPanelLabel("k9", x0, y0 + rh*r, "HTF " + htfTf, clrSilver, 8);
+   SetPanelLabel("v9", vx, y0 + rh*r, htfTxt, htfCol, 8); r++;
    SetPanelLabel("k3", x0, y0 + rh*r, "Zona", clrSilver, 8);
    SetPanelLabel("v3", vx, y0 + rh*r, zoneState, zCol, 8); r++;
    SetPanelLabel("k4", x0, y0 + rh*r, "Spread", clrSilver, 8);
@@ -383,6 +405,18 @@ double GetEma()
    double e[];
    if(CopyBuffer(hEma, 0, 1, 1, e) < 1) return(0.0);
    return(e[0]);
+  }
+//+------------------------------------------------------------------+
+//| Yuqori TF trend biasini yangilash                                |
+void UpdateHtfBias()
+  {
+   if(!InpUseMTF) { htfBias = 0; return; }
+   double e[];
+   if(CopyBuffer(hHtfEma, 0, 1, 1, e) < 1) return; // eski qiymatni saqlaymiz
+   double htfClose = iClose(_Symbol, InpHTF, 1);
+   if(htfClose > e[0])      htfBias = 1;
+   else if(htfClose < e[0]) htfBias = -1;
+   else                     htfBias = 0;
   }
 //+------------------------------------------------------------------+
 //| shift dagi bar swing high mi?                                    |
@@ -541,9 +575,10 @@ void CheckEntry()
    if(trendDir == 1)
      {
       bool trendOk = !InpUseTrendEMA || c1 > ema;
+      bool htfOk   = !InpUseMTF || htfBias == 1; // yuqori TF ham bull
       bool touched = (l1 <= zoneHi + buf); // narx zonaga tegdi
       bool confirm = (c1 > o1);            // bullish tasdiq
-      if(trendOk && touched && confirm)
+      if(trendOk && htfOk && touched && confirm)
         {
          double sl = zoneLo - buf;
          double minStop = atr * InpMinStopATR;
@@ -571,9 +606,10 @@ void CheckEntry()
    else if(trendDir == -1)
      {
       bool trendOk = !InpUseTrendEMA || c1 < ema;
+      bool htfOk   = !InpUseMTF || htfBias == -1; // yuqori TF ham bear
       bool touched = (h1 >= zoneLo - buf);
       bool confirm = (c1 < o1);
-      if(trendOk && touched && confirm)
+      if(trendOk && htfOk && touched && confirm)
         {
          double sl = zoneHi + buf;
          double minStop = atr * InpMinStopATR;
@@ -684,6 +720,7 @@ void OnTick()
 
    if(Bars(_Symbol, _Period) < InpTrendEMA + InpSwing + 10) return;
 
+   UpdateHtfBias();
    UpdateStructure();
    CheckInvalidation();
    CheckRetest();
