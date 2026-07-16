@@ -14,6 +14,7 @@ MetaTrader 5 uchun ikkita fayl:
 | `presets/SMC_BTCUSD_H1.set` | **Preset** | SMC EA uchun BTCUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
 | `presets/SMC_XAUUSD_H1.set` | **Preset** | SMC EA uchun XAUUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
 | `presets/SMC_EURUSD_H1.set` | **Preset** | SMC EA uchun EURUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
+| `docs/AB_TESTING.md` | **Qo'llanma** | Filtrlarni A/B taqqoslash (Strategy Tester) usuli. |
 
 ---
 
@@ -81,6 +82,9 @@ Savdo faqat quyidagilar mos kelganda ochiladi — bu **soxta signallarni kamayti
 > ⚠️ **Halol eslatma:** bu filtrlar savdo **sifatini/tanlab olishni** yaxshilaydi, lekin
 > **foydani kafolatlamaydi** va "100% aniqlik" bermaydi — bunday narsa mavjud emas. Ular
 > statistik ustunlik (edge) ehtimolini oshiradi, xolos. Har doim Tester + DEMO'da tasdiqlang.
+
+> 📘 Qaysi filtr sizning simvolingizda haqiqatan foyda berayotganini aniqlash uchun
+> [`docs/AB_TESTING.md`](docs/AB_TESTING.md) — filtrlarni **A/B taqqoslash** qo'llanmasiga qarang.
 
 ### Kichik hisob himoyasi
 `InpSkipIfOverRisk=true` bo'lsa: agar risk hisobiga ko'ra kerakli lot minimal lotdan kichik
