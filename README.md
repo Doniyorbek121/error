@@ -71,6 +71,22 @@ o'tkaziladi hamda trailing bilan yuritiladi.
 yangi savdo ochilmaydi. Iqtisodiy kalendar **Strategy Tester'da ishlamaydi** —
 bu filtr faqat real/demo live rejimida ta'sir qiladi.
 
+### Sifat filtrlari (aniqlikni oshiruvchi)
+Savdo faqat quyidagilar mos kelganda ochiladi — bu **soxta signallarni kamaytiradi**:
+- **ADX** — trend kuchi `InpADXmin` (20) dan yuqori bo'lishi kerak; yon (chop) bozorda savdo qilinmaydi.
+- **RSI** — Buy'da narx cho'qqida (RSI > `InpRSIbuyMax`) bo'lmasligi, Sell'da tubda (RSI < `InpRSIsellMin`) bo'lmasligi kerak.
+- **Kunlik savdo limiti** (`InpMaxDailyTrades`) — ortiqcha savdoning oldini oladi.
+- **Zarardan keyin sovish** (`InpCooldownBars`) — zararli savdodan keyin bir necha bar kutadi.
+
+> ⚠️ **Halol eslatma:** bu filtrlar savdo **sifatini/tanlab olishni** yaxshilaydi, lekin
+> **foydani kafolatlamaydi** va "100% aniqlik" bermaydi — bunday narsa mavjud emas. Ular
+> statistik ustunlik (edge) ehtimolini oshiradi, xolos. Har doim Tester + DEMO'da tasdiqlang.
+
+### Kichik hisob himoyasi
+`InpSkipIfOverRisk=true` bo'lsa: agar risk hisobiga ko'ra kerakli lot minimal lotdan kichik
+chiqsa (ya'ni minimal lot belgilangan `InpRiskPercent`'dan ko'proq risk qilardi), EA
+**savdoni ochmaydi** — kichik depozitni haddan tashqari riskdan himoya qiladi.
+
 ### Asosiy parametrlar
 
 | Parametr | Izoh | Standart |
@@ -82,6 +98,11 @@ bu filtr faqat real/demo live rejimida ta'sir qiladi.
 | `InpUseTrendEMA` / `InpTrendEMA` | EMA trend filtri | true / 200 |
 | `InpUseMTF` | Yuqori TF trend filtri | true |
 | `InpHTF` / `InpHTFema` | Yuqori timeframe va uning EMA davri | H1 / 50 |
+| `InpUseADX` / `InpADXmin` | ADX trend-kuch filtri (chopni chetlaydi) | true / 20 |
+| `InpUseRSI` / `InpRSIbuyMax` / `InpRSIsellMin` | RSI ekstremum filtri | true / 70 / 30 |
+| `InpMaxDailyTrades` | Kunlik maksimal savdo (0 = cheksiz) | 5 |
+| `InpCooldownBars` | Zarardan keyin sovish (bar) | 3 |
+| `InpSkipIfOverRisk` | Risk oshsa savdoni o'tkazib yuborish | true |
 | `InpMaxSpreadPts` | Maksimal spread (punkt) | 30 |
 | `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
 | `InpUsePartial` | TP1 da qisman yopish | true |

@@ -6,8 +6,8 @@
 //|  kafolati YO'Q. Har doim avval DEMO hisobda sinang.              |
 //+------------------------------------------------------------------+
 #property copyright "SMC_AutoTrader"
-#property version   "1.00"
-#property description "Market Structure (BOS) + Order Block retest strategiyasi, risk-menejment bilan."
+#property version   "1.10"
+#property description "Market Structure (BOS) + Order Block retest; ADX/RSI/MTF filtrlar, risk-menejment."
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -42,6 +42,20 @@ input double InpRiskPercent    = 1.0;      // Har savdoda risk (% balans)
 input double InpFixedLot       = 0.0;      // >0 bo'lsa risk o'rniga qat'iy lot
 input double InpRewardRR       = 2.0;      // Take Profit = RR x risk masofasi
 input double InpMinStopATR     = 0.5;      // Minimal SL masofasi (ATR ulushi)
+input bool   InpSkipIfOverRisk = true;     // Risk oshsa (min lot > risk) savdoni o'tkazib yuborish
+
+input group "=== Sifat filtrlari (aniqlikni oshirish) ==="
+input bool   InpUseADX         = true;     // ADX trend-kuch filtri (chopni chetlab o'tadi)
+input int    InpADXperiod      = 14;       // ADX davri
+input double InpADXmin         = 20.0;     // Minimal ADX (past = kuchsiz trend)
+input bool   InpUseRSI         = true;     // RSI ekstremum filtri
+input int    InpRSIperiod      = 14;       // RSI davri
+input double InpRSIbuyMax      = 70.0;     // Buy: RSI shundan yuqori bo'lsa kirmaymiz
+input double InpRSIsellMin     = 30.0;     // Sell: RSI shundan past bo'lsa kirmaymiz
+
+input group "=== Overtrading nazorati ==="
+input int    InpMaxDailyTrades = 5;        // Kunlik maksimal savdo (0 = cheksiz)
+input int    InpCooldownBars   = 3;        // Zarardan keyin sovish (bar); 0 = o'chiq
 
 input group "=== Pozitsiyani boshqarish ==="
 input bool   InpUseBreakEven   = true;     // Break-even yoqilsinmi
@@ -93,6 +107,8 @@ CTrade   trade;
 int      hAtr    = INVALID_HANDLE;
 int      hEma    = INVALID_HANDLE;
 int      hHtfEma = INVALID_HANDLE;
+int      hAdx    = INVALID_HANDLE;
+int      hRsi    = INVALID_HANDLE;
 int      htfBias = 0;          // yuqori TF trend: 1 bull, -1 bear, 0 neytral
 
 datetime lastBarTime = 0;
@@ -130,6 +146,10 @@ double   statProfit = 0.0;
 double   dayStartEquity = 0.0;
 int      curDay = -1;
 
+// overtrading nazorati
+int      dailyTrades = 0;      // shu kun ochilgan savdolar
+datetime lossUntil   = 0;      // shu vaqtgacha zarardan keyin sovish
+
 // partial close
 bool     partialDone = false; // joriy pozitsiyada TP1 bajarildimi
 
@@ -145,9 +165,15 @@ int OnInit()
       hEma = iMA(_Symbol, _Period, InpTrendEMA, 0, MODE_EMA, PRICE_CLOSE);
    if(InpUseMTF)
       hHtfEma = iMA(_Symbol, InpHTF, InpHTFema, 0, MODE_EMA, PRICE_CLOSE);
+   if(InpUseADX)
+      hAdx = iADX(_Symbol, _Period, InpADXperiod);
+   if(InpUseRSI)
+      hRsi = iRSI(_Symbol, _Period, InpRSIperiod, PRICE_CLOSE);
 
    if(hAtr == INVALID_HANDLE || (InpUseTrendEMA && hEma == INVALID_HANDLE) ||
-      (InpUseMTF && hHtfEma == INVALID_HANDLE))
+      (InpUseMTF && hHtfEma == INVALID_HANDLE) ||
+      (InpUseADX && hAdx == INVALID_HANDLE) ||
+      (InpUseRSI && hRsi == INVALID_HANDLE))
      {
       Print("Indikator handllarini yaratib bo'lmadi.");
       return(INIT_FAILED);
@@ -171,6 +197,8 @@ void OnDeinit(const int reason)
    if(hAtr != INVALID_HANDLE) IndicatorRelease(hAtr);
    if(hEma != INVALID_HANDLE) IndicatorRelease(hEma);
    if(hHtfEma != INVALID_HANDLE) IndicatorRelease(hHtfEma);
+   if(hAdx != INVALID_HANDLE) IndicatorRelease(hAdx);
+   if(hRsi != INVALID_HANDLE) IndicatorRelease(hRsi);
    DeleteAllZones();
    DeletePanel();
    ObjectsDeleteAll(0, ARR_PREFIX);
@@ -354,7 +382,7 @@ void UpdatePanel()
    int rh = 16;                 // qator balandligi
    int vx = x0 + 118;           // qiymat ustuni
 
-   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 16 + 14);
+   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 18 + 14);
 
    // trend
    string trTxt = trendDir == 1 ? "BULL" : trendDir == -1 ? "BEAR" : "—";
@@ -409,6 +437,16 @@ void UpdatePanel()
    string dLimTxt = !InpUseDailyLimit ? "off" : (dOk ? "OK" : "HIT — STOP");
    color  dLimCol = !InpUseDailyLimit ? clrGray : (dOk ? clrLime : clrTomato);
 
+   // sifat filtrlari
+   double adxVal = GetADX();
+   double rsiVal = GetRSI();
+   string adxTxt = !InpUseADX ? "off" : DoubleToString(adxVal, 0);
+   color  adxCol = !InpUseADX ? clrGray : (adxVal >= InpADXmin ? clrLime : clrTomato);
+   string filtTxt = adxTxt + " / " + (!InpUseRSI ? "off" : DoubleToString(rsiVal, 0));
+   string dtTxt = IntegerToString(dailyTrades) +
+                  (InpMaxDailyTrades > 0 ? "/" + IntegerToString(InpMaxDailyTrades) : "");
+   bool coolOn = (InpCooldownBars > 0 && TimeCurrent() < lossUntil);
+
    // statistika
    double winRate = statTrades > 0 ? (double)statWins / statTrades * 100.0 : 0.0;
    color  spCol2  = statProfit >= 0 ? clrLime : clrTomato;
@@ -433,6 +471,11 @@ void UpdatePanel()
    SetPanelLabel("v7", vx, y0 + rh*r, DoubleToString(InpRiskPercent, 1) + " %", clrWhite, 8); r++;
    SetPanelLabel("k8", x0, y0 + rh*r, "Algo Trading", clrSilver, 8);
    SetPanelLabel("v8", vx, y0 + rh*r, algo ? "ON" : "OFF", algo ? clrLime : clrTomato, 8); r++;
+   SetPanelLabel("k15", x0, y0 + rh*r, "ADX / RSI", clrSilver, 8);
+   SetPanelLabel("v15", vx, y0 + rh*r, filtTxt, adxCol, 8); r++;
+   SetPanelLabel("k16", x0, y0 + rh*r, "Bugun savdo", clrSilver, 8);
+   SetPanelLabel("v16", vx, y0 + rh*r, dtTxt + (coolOn ? "  (cooldown)" : ""),
+                 coolOn ? InpRetestColor : clrWhite, 8); r++;
    SetPanelLabel("s0", x0, y0 + rh*r, "— STATISTIKA —", C'255,210,60', 8); r++;
    SetPanelLabel("k10", x0, y0 + rh*r, "Kunlik P/L", clrSilver, 8);
    SetPanelLabel("v10", vx, y0 + rh*r, DoubleToString(dailyPL, 2) + " " + cur, dpCol, 8); r++;
@@ -478,6 +521,43 @@ void UpdateHtfBias()
    if(htfClose > e[0])      htfBias = 1;
    else if(htfClose < e[0]) htfBias = -1;
    else                     htfBias = 0;
+  }
+//+------------------------------------------------------------------+
+//| ADX asosiy chizig'i (oxirgi yopilgan bar)                        |
+double GetADX()
+  {
+   if(!InpUseADX) return(100.0); // filtr o'chiq bo'lsa doim o'tsin
+   double a[];
+   if(CopyBuffer(hAdx, 0, 1, 1, a) < 1) return(0.0);
+   return(a[0]);
+  }
+//+------------------------------------------------------------------+
+//| RSI (oxirgi yopilgan bar)                                        |
+double GetRSI()
+  {
+   if(!InpUseRSI) return(50.0); // filtr o'chiq bo'lsa neytral
+   double r[];
+   if(CopyBuffer(hRsi, 0, 1, 1, r) < 1) return(50.0);
+   return(r[0]);
+  }
+//+------------------------------------------------------------------+
+//| Oxirgi yopilgan savdoning natijasi (foyda/zarar)                 |
+double LastClosedProfit()
+  {
+   if(!HistorySelect(TimeCurrent() - 30 * 86400, TimeCurrent())) return(0.0);
+   int total = HistoryDealsTotal();
+   for(int i = total - 1; i >= 0; i--)
+     {
+      ulong ticket = HistoryDealGetTicket(i);
+      if(ticket == 0) continue;
+      if(HistoryDealGetInteger(ticket, DEAL_MAGIC) != InpMagic) continue;
+      if(HistoryDealGetString(ticket, DEAL_SYMBOL) != _Symbol) continue;
+      if(HistoryDealGetInteger(ticket, DEAL_ENTRY) != DEAL_ENTRY_OUT) continue;
+      return(HistoryDealGetDouble(ticket, DEAL_PROFIT)
+           + HistoryDealGetDouble(ticket, DEAL_SWAP)
+           + HistoryDealGetDouble(ticket, DEAL_COMMISSION));
+     }
+   return(0.0);
   }
 //+------------------------------------------------------------------+
 //| Statistikani tarix bitimlaridan hisoblash                        |
@@ -637,7 +717,19 @@ double CalcLots(double slDistance)
    double lossPerLot = slDistance / tickSize * tickVal;
    if(lossPerLot <= 0.0) return(0.0);
 
-   return(NormalizeLots(riskMoney / lossPerLot));
+   double raw  = riskMoney / lossPerLot;
+   double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+
+   // Kichik hisob: risk hisobiga ko'ra lot minimal lotdan kichik chiqsa,
+   // minimal lot belgilangan %'dan ortiq risk qiladi -> savdoni o'tkazib yuboramiz.
+   if(raw < minL && InpSkipIfOverRisk)
+     {
+      Print("Savdo o'tkazib yuborildi: min lot risk %'dan oshib ketadi (raw=",
+            DoubleToString(raw, 4), " < min=", DoubleToString(minL, 2), ")");
+      return(0.0);
+     }
+
+   return(NormalizeLots(raw));
   }
 double NormalizeLots(double lots)
   {
@@ -741,9 +833,18 @@ void CheckEntry()
    if(!DailyOK())               return; // kunlik zarar limiti
    if(!NewsOK())                return; // yuqori ta'sirli yangilik yaqin
 
+   // overtrading nazorati
+   if(InpMaxDailyTrades > 0 && dailyTrades >= InpMaxDailyTrades) return;
+   if(InpCooldownBars > 0 && TimeCurrent() < lossUntil)          return;
+
+   // trend-kuch filtri (chopni chetlab o'tadi)
+   if(InpUseADX && GetADX() < InpADXmin) return;
+
    double atr = GetAtr();
    if(atr <= 0.0) return;
    double buf = atr * InpZoneBufferATR;
+
+   double rsi = GetRSI();
 
    double o1 = iOpen(_Symbol, _Period, 1);
    double c1 = iClose(_Symbol, _Period, 1);
@@ -759,9 +860,10 @@ void CheckEntry()
      {
       bool trendOk = !InpUseTrendEMA || c1 > ema;
       bool htfOk   = !InpUseMTF || htfBias == 1; // yuqori TF ham bull
+      bool rsiOk   = !InpUseRSI || rsi < InpRSIbuyMax; // cho'qqida sotib olmaymiz
       bool touched = (l1 <= zoneHi + buf); // narx zonaga tegdi
       bool confirm = (c1 > o1);            // bullish tasdiq
-      if(trendOk && htfOk && touched && confirm)
+      if(trendOk && htfOk && rsiOk && touched && confirm)
         {
          double sl = zoneLo - buf;
          double minStop = MinStopDist(atr);
@@ -778,6 +880,7 @@ void CheckEntry()
          if(trade.Buy(lots, _Symbol, 0.0, sl, tp, InpComment))
            {
             zoneTraded = true;
+            dailyTrades++;
             DrawEntryArrow(true, ask);
             Notify(StringFormat("SMC BUY %s @ %s | SL %s | TP %s | %.2f lot",
                    _Symbol, DoubleToString(ask,_Digits),
@@ -790,9 +893,10 @@ void CheckEntry()
      {
       bool trendOk = !InpUseTrendEMA || c1 < ema;
       bool htfOk   = !InpUseMTF || htfBias == -1; // yuqori TF ham bear
+      bool rsiOk   = !InpUseRSI || rsi > InpRSIsellMin; // tubda sotmaymiz
       bool touched = (h1 >= zoneLo - buf);
       bool confirm = (c1 < o1);
-      if(trendOk && htfOk && touched && confirm)
+      if(trendOk && htfOk && rsiOk && touched && confirm)
         {
          double sl = zoneHi + buf;
          double minStop = MinStopDist(atr);
@@ -809,6 +913,7 @@ void CheckEntry()
          if(trade.Sell(lots, _Symbol, 0.0, sl, tp, InpComment))
            {
             zoneTraded = true;
+            dailyTrades++;
             DrawEntryArrow(false, bid);
             Notify(StringFormat("SMC SELL %s @ %s | SL %s | TP %s | %.2f lot",
                    _Symbol, DoubleToString(bid,_Digits),
@@ -891,6 +996,7 @@ void OnTick()
      {
       curDay = dt.day;
       dayStartEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+      dailyTrades = 0; // yangi kun — savdo hisobini nolga tushiramiz
      }
 
    // partial close (TP1) va pozitsiyani boshqarish
@@ -905,6 +1011,9 @@ void OnTick()
      {
       Notify("SMC: pozitsiya yopildi | " + _Symbol);
       ComputeStats();                        // statistikani yangilaymiz
+      // zarar bilan yopilgan bo'lsa — sovish (cooldown) o'rnatamiz
+      if(InpCooldownBars > 0 && LastClosedProfit() < 0.0)
+         lossUntil = TimeCurrent() + (datetime)(InpCooldownBars * PeriodSeconds(_Period));
      }
    prevHasPos = nowPos;
 
