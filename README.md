@@ -44,6 +44,25 @@ Savdo ochilganda va yopilganda **alert** (ekranda) va ixtiyoriy **push** (telefo
 yuboriladi. Push ishlashi uchun MT5 → Tools → Options → Notifications da MetaQuotes ID
 kiritilgan bo'lishi kerak.
 
+### Statistika (tarixdan)
+Panel pastida jonli statistika: **umumiy savdolar (W/L), g'alaba %, jami P/L** —
+shu EA (magic) va shu instrument bo'yicha tarix bitimlaridan hisoblanadi.
+
+### Kunlik risk limiti
+Kun boshidagi equity'ga nisbatan zarar `InpMaxDailyLossPct` (standart 5%) ga yetsa,
+kun oxirigacha **yangi savdo ochilmaydi**. Panelda "Kunlik limit: HIT — STOP" ko'rinadi.
+
+### Partial close (TP1)
+Narx TP gacha masofaning `InpPartialTPfrac` ulushiga (standart yarim yo'l) yetganda,
+pozitsiyaning `InpPartialPct` qismi (standart 50%) yopiladi va qolgani **break-even**'ga
+o'tkaziladi hamda trailing bilan yuritiladi.
+
+### Yangilik filtri (faqat live)
+`InpUseNewsFilter = true` bo'lsa, MT5 iqtisodiy kalendaridagi **yuqori ta'sirli**
+(instrument valyutasiga oid) yangilikdan oldin/keyin belgilangan daqiqalar ichida
+yangi savdo ochilmaydi. Iqtisodiy kalendar **Strategy Tester'da ishlamaydi** —
+bu filtr faqat real/demo live rejimida ta'sir qiladi.
+
 ### Asosiy parametrlar
 
 | Parametr | Izoh | Standart |
@@ -57,6 +76,11 @@ kiritilgan bo'lishi kerak.
 | `InpHTF` / `InpHTFema` | Yuqori timeframe va uning EMA davri | H1 / 50 |
 | `InpMaxSpreadPts` | Maksimal spread (punkt) | 30 |
 | `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
+| `InpUsePartial` | TP1 da qisman yopish | true |
+| `InpPartialTPfrac` / `InpPartialPct` | TP1 masofasi / yopiladigan hajm % | 0.5 / 50 |
+| `InpUseDailyLimit` / `InpMaxDailyLossPct` | Kunlik zarar limiti | true / 5% |
+| `InpUseNewsFilter` | Yangilik filtri (faqat live) | false |
+| `InpNewsBeforeMin` / `InpNewsAfterMin` | Yangilik oldi/keyingi bufer (daq) | 30 / 30 |
 | `InpShowPanel` | Grafikda info-panel (dashboard) | true |
 | `InpShowEntryArrows` | Kirish strelkalarini chizish | true |
 | `InpAlertPopup` / `InpAlertPush` | Alert / telefonga push | true / false |

@@ -71,6 +71,23 @@ input group "=== Bildirishnoma ==="
 input bool   InpAlertPopup     = true;     // Ekranda alert
 input bool   InpAlertPush      = false;    // Telefonga push (MT5 sozlamasi kerak)
 
+input group "=== Kunlik risk limiti ==="
+input bool   InpUseDailyLimit  = true;     // Kunlik zarar limiti yoqilsinmi
+input double InpMaxDailyLossPct = 5.0;     // Maksimal kunlik zarar (% kun boshidagi equity)
+
+input group "=== Partial close (TP1) ==="
+input bool   InpUsePartial     = true;     // TP1 da qisman yopish yoqilsinmi
+input double InpPartialTPfrac  = 0.5;      // TP1 = TP gacha masofaning ulushi (0.5 = yarim yo'l)
+input double InpPartialPct     = 50.0;     // TP1 da yopiladigan hajm (%)
+
+input group "=== Yangilik filtri (faqat live) ==="
+input bool   InpUseNewsFilter  = false;    // Yuqori ta'sirli yangilik vaqtida savdodan chetlanish
+input int    InpNewsBeforeMin  = 30;       // Yangilikdan oldin (daqiqa)
+input int    InpNewsAfterMin   = 30;       // Yangilikdan keyin (daqiqa)
+
+input group "=== Statistika ==="
+input int    InpStatsHistoryDays = 0;      // Tarix chuqurligi (kun); 0 = butun tarix
+
 //====================== GLOBAL O'ZGARUVCHILAR =====================
 CTrade   trade;
 int      hAtr    = INVALID_HANDLE;
@@ -105,6 +122,17 @@ bool     zoneRetested = false;// faol zona retest bo'ldimi
 string   zoneState = "NONE";  // panel uchun: NONE/BULL/BEAR/RETEST/BROKEN
 bool     prevHasPos = false;  // pozitsiya yopilishini aniqlash uchun
 
+// statistika (tarixdan)
+int      statTrades = 0, statWins = 0, statLosses = 0;
+double   statProfit = 0.0;
+
+// kunlik risk
+double   dayStartEquity = 0.0;
+int      curDay = -1;
+
+// partial close
+bool     partialDone = false; // joriy pozitsiyada TP1 bajarildimi
+
 //+------------------------------------------------------------------+
 int OnInit()
   {
@@ -127,6 +155,13 @@ int OnInit()
 
    if(InpRiskPercent <= 0 && InpFixedLot <= 0)
       Print("Ogohlantirish: Risk% va Fixed lot ikkalasi ham 0. Savdo ochilmaydi.");
+
+   dayStartEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+   MqlDateTime dt;
+   TimeToStruct(TimeCurrent(), dt);
+   curDay = dt.day;
+   prevHasPos = HasPosition();
+   ComputeStats();
 
    return(INIT_SUCCEEDED);
   }
@@ -318,7 +353,7 @@ void UpdatePanel()
    int rh = 16;                 // qator balandligi
    int vx = x0 + 118;           // qiymat ustuni
 
-   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 11 + 14);
+   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 16 + 14);
 
    // trend
    string trTxt = trendDir == 1 ? "BULL" : trendDir == -1 ? "BEAR" : "—";
@@ -365,6 +400,18 @@ void UpdatePanel()
 
    string tf = StringSubstr(EnumToString((ENUM_TIMEFRAMES)_Period), 7);
 
+   // kunlik P/L va limit holati
+   string cur = AccountInfoString(ACCOUNT_CURRENCY);
+   double dailyPL = AccountInfoDouble(ACCOUNT_EQUITY) - dayStartEquity;
+   color  dpCol = dailyPL >= 0 ? clrLime : clrTomato;
+   bool   dOk = DailyOK();
+   string dLimTxt = !InpUseDailyLimit ? "off" : (dOk ? "OK" : "HIT — STOP");
+   color  dLimCol = !InpUseDailyLimit ? clrGray : (dOk ? clrLime : clrTomato);
+
+   // statistika
+   double winRate = statTrades > 0 ? (double)statWins / statTrades * 100.0 : 0.0;
+   color  spCol2  = statProfit >= 0 ? clrLime : clrTomato;
+
    int r = 0;
    SetPanelLabel("T",  x0, y0 + rh*r, "◆ SMC AUTO TRADER", C'255,210,60', 10); r++;
    SetPanelLabel("k1", x0, y0 + rh*r, "Instrument", clrSilver, 8);
@@ -385,6 +432,19 @@ void UpdatePanel()
    SetPanelLabel("v7", vx, y0 + rh*r, DoubleToString(InpRiskPercent, 1) + " %", clrWhite, 8); r++;
    SetPanelLabel("k8", x0, y0 + rh*r, "Algo Trading", clrSilver, 8);
    SetPanelLabel("v8", vx, y0 + rh*r, algo ? "ON" : "OFF", algo ? clrLime : clrTomato, 8); r++;
+   SetPanelLabel("s0", x0, y0 + rh*r, "— STATISTIKA —", C'255,210,60', 8); r++;
+   SetPanelLabel("k10", x0, y0 + rh*r, "Kunlik P/L", clrSilver, 8);
+   SetPanelLabel("v10", vx, y0 + rh*r, DoubleToString(dailyPL, 2) + " " + cur, dpCol, 8); r++;
+   SetPanelLabel("k11", x0, y0 + rh*r, "Kunlik limit", clrSilver, 8);
+   SetPanelLabel("v11", vx, y0 + rh*r, dLimTxt, dLimCol, 8); r++;
+   SetPanelLabel("k12", x0, y0 + rh*r, "Savdolar", clrSilver, 8);
+   SetPanelLabel("v12", vx, y0 + rh*r, IntegerToString(statTrades) +
+                 " (" + IntegerToString(statWins) + "W/" + IntegerToString(statLosses) + "L)", clrWhite, 8); r++;
+   SetPanelLabel("k13", x0, y0 + rh*r, "G'alaba %", clrSilver, 8);
+   SetPanelLabel("v13", vx, y0 + rh*r, DoubleToString(winRate, 1) + " %",
+                 winRate >= 50 ? clrLime : clrSilver, 8); r++;
+   SetPanelLabel("k14", x0, y0 + rh*r, "Jami P/L", clrSilver, 8);
+   SetPanelLabel("v14", vx, y0 + rh*r, DoubleToString(statProfit, 2) + " " + cur, spCol2, 8); r++;
   }
 //+------------------------------------------------------------------+
 //| Panel obyektlarini o'chirish                                     |
@@ -417,6 +477,117 @@ void UpdateHtfBias()
    if(htfClose > e[0])      htfBias = 1;
    else if(htfClose < e[0]) htfBias = -1;
    else                     htfBias = 0;
+  }
+//+------------------------------------------------------------------+
+//| Statistikani tarix bitimlaridan hisoblash                        |
+void ComputeStats()
+  {
+   datetime from = 0;
+   if(InpStatsHistoryDays > 0)
+      from = TimeCurrent() - (datetime)InpStatsHistoryDays * 86400;
+   if(!HistorySelect(from, TimeCurrent())) return;
+
+   int wins = 0, losses = 0, trades = 0;
+   double profit = 0.0;
+   int total = HistoryDealsTotal();
+   for(int i = 0; i < total; i++)
+     {
+      ulong ticket = HistoryDealGetTicket(i);
+      if(ticket == 0) continue;
+      if(HistoryDealGetInteger(ticket, DEAL_MAGIC) != InpMagic) continue;
+      if(HistoryDealGetString(ticket, DEAL_SYMBOL) != _Symbol) continue;
+      if(HistoryDealGetInteger(ticket, DEAL_ENTRY) != DEAL_ENTRY_OUT) continue;
+
+      double p = HistoryDealGetDouble(ticket, DEAL_PROFIT)
+               + HistoryDealGetDouble(ticket, DEAL_SWAP)
+               + HistoryDealGetDouble(ticket, DEAL_COMMISSION);
+      profit += p;
+      trades++;
+      if(p >= 0) wins++; else losses++;
+     }
+   statTrades = trades;
+   statWins   = wins;
+   statLosses = losses;
+   statProfit = profit;
+  }
+//+------------------------------------------------------------------+
+//| Kunlik risk limiti: yangi savdoga ruxsat bormi                   |
+bool DailyOK()
+  {
+   if(!InpUseDailyLimit) return(true);
+   double eq = AccountInfoDouble(ACCOUNT_EQUITY);
+   double loss = dayStartEquity - eq; // musbat = zarar
+   if(dayStartEquity > 0 && loss >= dayStartEquity * InpMaxDailyLossPct / 100.0)
+      return(false);
+   return(true);
+  }
+//+------------------------------------------------------------------+
+//| Yangilik filtri: yuqori ta'sirli yangilik yaqinmi (faqat live)   |
+bool NewsOK()
+  {
+   if(!InpUseNewsFilter) return(true);
+
+   datetime now = TimeCurrent();
+   datetime f = now - (datetime)InpNewsAfterMin * 60;
+   datetime t = now + (datetime)InpNewsBeforeMin * 60;
+
+   string base = SymbolInfoString(_Symbol, SYMBOL_CURRENCY_BASE);
+   string prof = SymbolInfoString(_Symbol, SYMBOL_CURRENCY_PROFIT);
+
+   if(NewsHitForCurrency(base, f, t)) return(false);
+   if(prof != base && NewsHitForCurrency(prof, f, t)) return(false);
+   return(true); // ma'lumot bo'lmasa (tester/uzilish) savdoga ruxsat
+  }
+bool NewsHitForCurrency(string cur, datetime f, datetime t)
+  {
+   MqlCalendarValue values[];
+   int n = CalendarValueHistory(values, f, t, NULL, cur);
+   for(int i = 0; i < n; i++)
+     {
+      MqlCalendarEvent ev;
+      if(!CalendarEventById(values[i].event_id, ev)) continue;
+      if(ev.importance == CALENDAR_IMPORTANCE_HIGH)
+         return(true);
+     }
+   return(false);
+  }
+//+------------------------------------------------------------------+
+//| Partial close: TP1 ga yetganda hajmning bir qismini yopish       |
+void ManagePartial()
+  {
+   if(!InpUsePartial || partialDone) return;
+   if(!HasPosition()) return;
+
+   double open = PositionGetDouble(POSITION_PRICE_OPEN);
+   double tp   = PositionGetDouble(POSITION_TP);
+   double vol  = PositionGetDouble(POSITION_VOLUME);
+   long   type = PositionGetInteger(POSITION_TYPE);
+   if(tp <= 0.0) return;
+
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+
+   double tp1 = open + (tp - open) * InpPartialTPfrac; // ikki yo'nalish uchun ham to'g'ri
+   bool reached = (type == POSITION_TYPE_BUY) ? (bid >= tp1) : (ask <= tp1);
+   if(!reached) return;
+
+   double minL   = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double closeV = NormalizeLots(vol * InpPartialPct / 100.0);
+
+   // hajmni toza bo'lishtira olmasak — faqat break-even qilamiz
+   if(closeV >= minL && (vol - closeV) >= minL)
+     {
+      if(trade.PositionClosePartial(_Symbol, closeV))
+        {
+         Notify(StringFormat("SMC: TP1 — %.2f lot yopildi (%s)", closeV, _Symbol));
+         // qolganini break-even'ga o'tkazamiz
+         double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+         double be = (type == POSITION_TYPE_BUY) ? open + InpBElockPts * point
+                                                 : open - InpBElockPts * point;
+         trade.PositionModify(_Symbol, NormalizePrice(be), tp);
+        }
+     }
+   partialDone = true; // takror urinmaslik uchun
   }
 //+------------------------------------------------------------------+
 //| shift dagi bar swing high mi?                                    |
@@ -557,6 +728,8 @@ void CheckEntry()
    if(!zoneActive || zoneTraded) return;
    if(HasPosition())            return;
    if(!SpreadOK() || !SessionOK()) return;
+   if(!DailyOK())               return; // kunlik zarar limiti
+   if(!NewsOK())                return; // yuqori ta'sirli yangilik yaqin
 
    double atr = GetAtr();
    if(atr <= 0.0) return;
@@ -701,13 +874,28 @@ void ManagePosition()
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   // har tikda ochiq pozitsiyani boshqaramiz (trailing tez ishlashi uchun)
+   // kun almashsa — kunlik risk hisobini qayta boshlaymiz
+   MqlDateTime dt;
+   TimeToStruct(TimeCurrent(), dt);
+   if(dt.day != curDay)
+     {
+      curDay = dt.day;
+      dayStartEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+     }
+
+   // partial close (TP1) va pozitsiyani boshqarish
+   ManagePartial();
    ManagePosition();
 
-   // pozitsiya yopilishini aniqlash (SL/TP yoki qo'lda)
+   // pozitsiya ochilishi/yopilishini aniqlash
    bool nowPos = HasPosition();
-   if(prevHasPos && !nowPos)
+   if(!prevHasPos && nowPos)                 // yangi pozitsiya ochildi
+      partialDone = false;
+   if(prevHasPos && !nowPos)                 // pozitsiya yopildi
+     {
       Notify("SMC: pozitsiya yopildi | " + _Symbol);
+      ComputeStats();                        // statistikani yangilaymiz
+     }
    prevHasPos = nowPos;
 
    // panelni har tikda yangilaymiz
