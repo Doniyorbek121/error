@@ -286,7 +286,8 @@ void DrawEntryArrow(bool isBuy, double price)
    if(!InpShowEntryArrows) return;
    string name = ARR_PREFIX + IntegerToString(arrCounter++);
    datetime t = iTime(_Symbol, _Period, 0);
-   ENUM_OBJECT ot = isBuy ? OBJ_ARROW_BUY : OBJ_ARROW_SELL;
+   ENUM_OBJECT ot = OBJ_ARROW_SELL;
+   if(isBuy) ot = OBJ_ARROW_BUY;
    if(ObjectCreate(0, name, ot, 0, t, price))
      {
       ObjectSetInteger(0, name, OBJPROP_COLOR, isBuy ? clrLime : clrRed);
@@ -656,6 +657,15 @@ bool SpreadOK()
    long spread = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    return(spread <= InpMaxSpreadPts);
   }
+//| Minimal SL masofasi: ATR va broker stops-level'dan kattasi        |
+double MinStopDist(double atr)
+  {
+   double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   long   slvl  = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   double broker = (double)(slvl + 2) * point; // kichik bufer bilan
+   return(MathMax(atr * InpMinStopATR, broker));
+  }
+//+------------------------------------------------------------------+
 bool SessionOK()
   {
    if(!InpUseSession) return(true);
@@ -754,7 +764,7 @@ void CheckEntry()
       if(trendOk && htfOk && touched && confirm)
         {
          double sl = zoneLo - buf;
-         double minStop = atr * InpMinStopATR;
+         double minStop = MinStopDist(atr);
          if(ask - sl < minStop) sl = ask - minStop;
          double slDist = ask - sl;
          if(slDist <= 0) return;
@@ -785,7 +795,7 @@ void CheckEntry()
       if(trendOk && htfOk && touched && confirm)
         {
          double sl = zoneHi + buf;
-         double minStop = atr * InpMinStopATR;
+         double minStop = MinStopDist(atr);
          if(sl - bid < minStop) sl = bid + minStop;
          double slDist = sl - bid;
          if(slDist <= 0) return;
