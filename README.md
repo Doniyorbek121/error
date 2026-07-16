@@ -27,7 +27,9 @@ MetaTrader 5 uchun ikkita fayl:
 
 Aniqlangan **Order Block zonalar** grafikda to'rtburchak (rectangle) sifatida chiziladi —
 bull (demand) yashil, bear (supply) qizil. Zonalar o'ngga proyeksiya qilinadi va soni
-`InpMaxDrawZones` bilan cheklanadi. Vizualni `InpDrawZones = false` bilan o'chirsa bo'ladi.
+`InpMaxDrawZones` bilan cheklanadi. Narx zonaga qaytib **teganda (retest)** zona rangi
+`InpRetestColor` (oltin) ga o'zgaradi — ishlatilgan zonani darhol ajratib ko'rsatadi.
+Vizualni `InpDrawZones = false` bilan o'chirsa bo'ladi.
 
 ### Asosiy parametrlar
 
@@ -42,6 +44,7 @@ bull (demand) yashil, bear (supply) qizil. Zonalar o'ngga proyeksiya qilinadi va
 | `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
 | `InpDrawZones` | Zonalarni grafikda chizish | true |
 | `InpBullZoneColor` / `InpBearZoneColor` | Zona ranglari | Teal / Crimson |
+| `InpRetestColor` | Retest bo'lgan zona rangi | Gold |
 | `InpZoneExtendBars` | Zonani o'ngga uzaytirish (bar) | 30 |
 | `InpMaxDrawZones` | Grafikda saqlanadigan zonalar soni | 12 |
 

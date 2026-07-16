@@ -49,6 +49,7 @@ input group "=== Vizual (zonalarni chizish) ==="
 input bool   InpDrawZones      = true;     // Zonalarni grafikda chizish
 input color  InpBullZoneColor  = clrTeal;  // Bull (demand) zona rangi
 input color  InpBearZoneColor  = clrCrimson; // Bear (supply) zona rangi
+input color  InpRetestColor    = clrGold;  // Retest bo'lgan zona rangi
 input int    InpZoneExtendBars = 30;       // Zonani o'ngga uzaytirish (bar)
 input int    InpMaxDrawZones   = 12;       // Grafikda saqlanadigan zonalar soni
 input bool   InpZoneFill       = true;     // Zonani to'ldirish (fon)
@@ -77,6 +78,8 @@ bool     zoneTraded = false;
 string   zoneNames[];         // grafikdagi rectangle nomlari
 long     zoneCounter = 0;     // noyob nom uchun sanagich
 string   ZONE_PREFIX = "SMC_ZONE_";
+string   activeZoneName = ""; // hozirgi faol zona obyekti
+bool     zoneRetested = false;// faol zona retest bo'ldimi
 
 //+------------------------------------------------------------------+
 int OnInit()
@@ -128,7 +131,27 @@ void DrawZone(bool isBull, double hi, double lo, datetime t0)
       int n = ArraySize(zoneNames);
       ArrayResize(zoneNames, n + 1);
       zoneNames[n] = name;
+      activeZoneName = name;
+      zoneRetested   = false;
       PruneZones();
+      ChartRedraw(0);
+     }
+  }
+//+------------------------------------------------------------------+
+//| Faol zona retest bo'lsa (narx tegsa) rangini o'zgartirish        |
+void CheckRetest()
+  {
+   if(!InpDrawZones || zoneRetested || !zoneActive) return;
+   if(activeZoneName == "" || ObjectFind(0, activeZoneName) < 0) return;
+
+   double l1 = iLow(_Symbol, _Period, 1);
+   double h1 = iHigh(_Symbol, _Period, 1);
+
+   // oxirgi yopilgan bar zonaga tegdimi
+   if(l1 <= zoneHi && h1 >= zoneLo)
+     {
+      ObjectSetInteger(0, activeZoneName, OBJPROP_COLOR, InpRetestColor);
+      zoneRetested = true;
       ChartRedraw(0);
      }
   }
@@ -457,6 +480,7 @@ void OnTick()
    if(Bars(_Symbol, _Period) < InpTrendEMA + InpSwing + 10) return;
 
    UpdateStructure();
+   CheckRetest();
    CheckEntry();
    if(InpDrawZones) ExtendLastZone();
   }
