@@ -12,6 +12,8 @@ MetaTrader 5 uchun ikkita fayl:
 | `presets/SMC_BTCUSD_M15.set` | **Preset** | SMC EA uchun BTCUSD M15 ga sozlangan tayyor parametrlar. |
 | `presets/SMC_GBPUSD_H1.set` | **Preset** | SMC EA uchun GBPUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
 | `presets/SMC_BTCUSD_H1.set` | **Preset** | SMC EA uchun BTCUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
+| `presets/SMC_XAUUSD_H1.set` | **Preset** | SMC EA uchun XAUUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
+| `presets/SMC_EURUSD_H1.set` | **Preset** | SMC EA uchun EURUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
 
 ---
 
@@ -175,10 +177,10 @@ shuning uchun ehtiyotkor sozlamalar:
 
 ## Tayyor preset: H1 timeframe (GBPUSD, BTCUSD)
 
-`presets/SMC_GBPUSD_H1.set` va `presets/SMC_BTCUSD_H1.set` — **H1 grafik** uchun. M15
-versiyalaridan asosiy farqi: yuqori TF filtri **H4** ga o'zgartirilgan (`InpHTF=H4`), chunki
-H1'da kirilganda kattaroq TF trendi mantiqan to'g'ri keladi. Har preset alohida **magic**
-raqamga ega (M15 bilan aralashmaydi).
+**H1 grafik** uchun to'rtta preset: `SMC_XAUUSD_H1.set`, `SMC_EURUSD_H1.set`,
+`SMC_GBPUSD_H1.set`, `SMC_BTCUSD_H1.set`. M15 versiyalaridan asosiy farqi: yuqori TF
+filtri **H4** ga o'zgartirilgan (`InpHTF=H4`), chunki H1'da kirilganda kattaroq TF trendi
+mantiqan to'g'ri keladi. Har preset alohida **magic** raqamga ega (M15 bilan aralashmaydi).
 
 > Muhim: **timeframe `.set` faylda saqlanmaydi** — u grafik yoki Strategy Tester'da
 > qo'lda tanlanadi. Ya'ni H1 presetdan foydalanishda grafik/Tester **Period = H1** bo'lishi
