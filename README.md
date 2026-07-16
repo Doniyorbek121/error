@@ -7,6 +7,7 @@ MetaTrader 5 uchun ikkita fayl:
 | `BuySellSignal.mq5` | **Indikator** | EMA kesishuvi asosida grafikda Buy/Sell strelka signallari (savdo ochmaydi). |
 | `SMC_AutoTrader.mq5` | **Expert Advisor (EA)** | Smart Money Concepts strategiyasi bilan **avtomatik** savdo ochadi/yopadi. |
 | `presets/SMC_XAUUSD_M15.set` | **Preset** | SMC EA uchun XAUUSD M15 ga sozlangan tayyor parametrlar. |
+| `presets/SMC_EURUSD_M15.set` | **Preset** | SMC EA uchun EURUSD M15 ga sozlangan tayyor parametrlar. |
 
 ---
 
@@ -135,6 +136,19 @@ volatilligini hisobga olib o'zgartirilganlar: `InpMaxSpreadPts=50`, `InpBElockPt
 
 > ⚠️ Broker/simvol nomi farq qilishi mumkin (`XAUUSD`, `GOLD`, `XAUUSD.m` ...). O'z brokeringiz
 > simvolini tanlang. Preset — **boshlang'ich nuqta**, kafolat emas; avval Tester + DEMO'da sinang.
+
+---
+
+## Tayyor preset: EURUSD M15
+
+`presets/SMC_EURUSD_M15.set` — EURUSD M15 uchun sozlangan. EURUSD 5-xonali (5-digit)
+va oltinga qaraganda kamroq volatil bo'lgani uchun o'zgartirilganlar: `InpMaxSpreadPts=20`
+(≈2 pip), `InpBElockPts=30` (≈3 pip), `InpTrailATR=1.0`. Yuklash usuli XAUUSD preseti bilan
+bir xil (Strategy Tester yoki grafik sozlamasida **Load**).
+
+> Eslatma: 5-xonali brokerda 1 pip = 10 punkt. Shuning uchun oltin va EURUSD presetlarida
+> `InpMaxSpreadPts` / `InpBElockPts` qiymatlari **punktda** har xil ko'rinadi, lekin ikkalasi
+> ham shu instrumentga mos. SL/TP masofasi ATR asosida bo'lgani uchun avtomatik moslashadi.
 
 ---
 
