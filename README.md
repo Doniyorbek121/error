@@ -6,6 +6,7 @@ MetaTrader 5 uchun ikkita fayl:
 |---|---|---|
 | `BuySellSignal.mq5` | **Indikator** | EMA kesishuvi asosida grafikda Buy/Sell strelka signallari (savdo ochmaydi). |
 | `SMC_AutoTrader.mq5` | **Expert Advisor (EA)** | Smart Money Concepts strategiyasi bilan **avtomatik** savdo ochadi/yopadi. |
+| `presets/SMC_XAUUSD_M15.set` | **Preset** | SMC EA uchun XAUUSD M15 ga sozlangan tayyor parametrlar. |
 
 ---
 
@@ -111,6 +112,29 @@ bu filtr faqat real/demo live rejimida ta'sir qiladi.
 ### Test (majburiy)
 - MT5 → **View → Strategy Tester** → EA ni tanlang → tarixiy ma'lumotda tekshiring.
 - Keyin **DEMO hisobda** real vaqtda kuzating.
+
+---
+
+## Tayyor preset: XAUUSD M15
+
+`presets/SMC_XAUUSD_M15.set` — oltin (XAUUSD) M15 grafigi uchun sozlangan. Oltinning
+volatilligini hisobga olib o'zgartirilganlar: `InpMaxSpreadPts=50`, `InpBElockPts=20`,
+`InpTrailATR=1.5`, `InpHTF=H1`.
+
+### Qanday yuklash
+
+**Strategy Tester'da:**
+1. MT5 → **View → Strategy Tester** → Expert: `SMC_AutoTrader`, Symbol: `XAUUSD`, Period: `M15`.
+2. **Inputs** yorlig'i → pastdagi **Load** tugmasi → `SMC_XAUUSD_M15.set` faylini tanlang.
+
+**Jonli grafikda:**
+1. EA ni XAUUSD M15 grafigiga tashlang → sozlamalar oynasida **Load** → `.set` faylni tanlang.
+
+> `.set` faylni oson topish uchun uni MT5 → **File → Open Data Folder → MQL5/Presets/**
+> papkasiga nusxalang (Tester "Load" oynasi shu papkani ochadi).
+
+> ⚠️ Broker/simvol nomi farq qilishi mumkin (`XAUUSD`, `GOLD`, `XAUUSD.m` ...). O'z brokeringiz
+> simvolini tanlang. Preset — **boshlang'ich nuqta**, kafolat emas; avval Tester + DEMO'da sinang.
 
 ---
 
