@@ -54,6 +54,17 @@ input color  InpBrokenColor    = clrGray;  // Buzilgan (invalid) zona rangi
 input int    InpZoneExtendBars = 30;       // Zonani o'ngga uzaytirish (bar)
 input int    InpMaxDrawZones   = 12;       // Grafikda saqlanadigan zonalar soni
 input bool   InpZoneFill       = true;     // Zonani to'ldirish (fon)
+input bool   InpShowEntryArrows= true;     // Kirish strelkalarini chizish
+
+input group "=== Panel (dashboard) ==="
+input bool             InpShowPanel   = true;               // Info panelni ko'rsatish
+input ENUM_BASE_CORNER InpPanelCorner = CORNER_LEFT_UPPER;  // Panel burchagi
+input int              InpPanelX      = 12;                 // Panel X masofa (px)
+input int              InpPanelY      = 20;                 // Panel Y masofa (px)
+
+input group "=== Bildirishnoma ==="
+input bool   InpAlertPopup     = true;     // Ekranda alert
+input bool   InpAlertPush      = false;    // Telefonga push (MT5 sozlamasi kerak)
 
 //====================== GLOBAL O'ZGARUVCHILAR =====================
 CTrade   trade;
@@ -78,9 +89,14 @@ bool     zoneTraded = false;
 // chizilgan zona obyektlari
 string   zoneNames[];         // grafikdagi rectangle nomlari
 long     zoneCounter = 0;     // noyob nom uchun sanagich
-string   ZONE_PREFIX = "SMC_ZONE_";
+string   ZONE_PREFIX  = "SMC_ZONE_";
+string   ARR_PREFIX   = "SMC_ARR_";
+string   PANEL_PREFIX = "SMC_PANEL_";
+long     arrCounter   = 0;
 string   activeZoneName = ""; // hozirgi faol zona obyekti
 bool     zoneRetested = false;// faol zona retest bo'ldimi
+string   zoneState = "NONE";  // panel uchun: NONE/BULL/BEAR/RETEST/BROKEN
+bool     prevHasPos = false;  // pozitsiya yopilishini aniqlash uchun
 
 //+------------------------------------------------------------------+
 int OnInit()
@@ -110,6 +126,8 @@ void OnDeinit(const int reason)
    if(hAtr != INVALID_HANDLE) IndicatorRelease(hAtr);
    if(hEma != INVALID_HANDLE) IndicatorRelease(hEma);
    DeleteAllZones();
+   DeletePanel();
+   ObjectsDeleteAll(0, ARR_PREFIX);
   }
 //+------------------------------------------------------------------+
 //| Zonani grafikda chizish (rectangle)                              |
@@ -134,6 +152,7 @@ void DrawZone(bool isBull, double hi, double lo, datetime t0)
       zoneNames[n] = name;
       activeZoneName = name;
       zoneRetested   = false;
+      zoneState      = isBull ? "BULL demand" : "BEAR supply";
       PruneZones();
       ChartRedraw(0);
      }
@@ -153,6 +172,7 @@ void CheckRetest()
      {
       ObjectSetInteger(0, activeZoneName, OBJPROP_COLOR, InpRetestColor);
       zoneRetested = true;
+      zoneState = "RETEST";
       ChartRedraw(0);
      }
   }
@@ -179,6 +199,7 @@ void CheckInvalidation()
          ChartRedraw(0);
         }
       zoneActive = false; // buzilgan zonaga endi kirmaymiz
+      zoneState = "BROKEN";
      }
   }
 //+------------------------------------------------------------------+
@@ -211,6 +232,143 @@ void ExtendLastZone()
    string name = zoneNames[n - 1];
    datetime t1 = TimeCurrent() + (datetime)(InpZoneExtendBars * PeriodSeconds(_Period));
    ObjectSetInteger(0, name, OBJPROP_TIME, 1, t1);
+  }
+//+------------------------------------------------------------------+
+//| Kirish strelkasini chizish                                       |
+void DrawEntryArrow(bool isBuy, double price)
+  {
+   if(!InpShowEntryArrows) return;
+   string name = ARR_PREFIX + IntegerToString(arrCounter++);
+   datetime t = iTime(_Symbol, _Period, 0);
+   ENUM_OBJECT ot = isBuy ? OBJ_ARROW_BUY : OBJ_ARROW_SELL;
+   if(ObjectCreate(0, name, ot, 0, t, price))
+     {
+      ObjectSetInteger(0, name, OBJPROP_COLOR, isBuy ? clrLime : clrRed);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 2);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+     }
+  }
+//+------------------------------------------------------------------+
+//| Bildirishnoma yuborish                                           |
+void Notify(string msg)
+  {
+   if(InpAlertPopup) Alert(msg);
+   if(InpAlertPush)  SendNotification(msg);
+   Print(msg);
+  }
+//+------------------------------------------------------------------+
+//| Panel: label yaratish/yangilash                                  |
+void SetPanelLabel(string suffix, int x, int y, string text, color col, int fs)
+  {
+   string name = PANEL_PREFIX + suffix;
+   if(ObjectFind(0, name) < 0)
+     {
+      ObjectCreate(0, name, OBJ_LABEL, 0, 0, 0);
+      ObjectSetInteger(0, name, OBJPROP_CORNER, InpPanelCorner);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+      ObjectSetString(0, name, OBJPROP_FONT, "Consolas");
+     }
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x);
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, fs);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, col);
+   ObjectSetString(0, name, OBJPROP_TEXT, text);
+  }
+//+------------------------------------------------------------------+
+//| Panel: fon to'rtburchagi                                         |
+void SetPanelBG(int x, int y, int w, int h)
+  {
+   string name = PANEL_PREFIX + "BG";
+   if(ObjectFind(0, name) < 0)
+     {
+      ObjectCreate(0, name, OBJ_RECTANGLE_LABEL, 0, 0, 0);
+      ObjectSetInteger(0, name, OBJPROP_CORNER, InpPanelCorner);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+      ObjectSetInteger(0, name, OBJPROP_BGCOLOR, C'12,16,24');
+      ObjectSetInteger(0, name, OBJPROP_BORDER_TYPE, BORDER_FLAT);
+      ObjectSetInteger(0, name, OBJPROP_COLOR, C'42,53,80');
+     }
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x);
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
+   ObjectSetInteger(0, name, OBJPROP_XSIZE, w);
+   ObjectSetInteger(0, name, OBJPROP_YSIZE, h);
+  }
+//+------------------------------------------------------------------+
+//| Panelni yangilash                                                |
+void UpdatePanel()
+  {
+   if(!InpShowPanel) return;
+
+   int x0 = InpPanelX;
+   int y0 = InpPanelY;
+   int rh = 16;                 // qator balandligi
+   int vx = x0 + 118;           // qiymat ustuni
+
+   SetPanelBG(x0 - 6, y0 - 6, 214, rh * 10 + 14);
+
+   // trend
+   string trTxt = trendDir == 1 ? "BULL" : trendDir == -1 ? "BEAR" : "—";
+   color  trCol = trendDir == 1 ? clrLime : trendDir == -1 ? clrTomato : clrSilver;
+
+   // zona holati rangi
+   color zCol = clrSilver;
+   if(zoneState == "BULL demand") zCol = InpBullZoneColor;
+   else if(zoneState == "BEAR supply") zCol = InpBearZoneColor;
+   else if(zoneState == "RETEST") zCol = InpRetestColor;
+   else if(zoneState == "BROKEN") zCol = InpBrokenColor;
+
+   // pozitsiya
+   string posTxt = "FLAT";
+   color  posCol = clrSilver;
+   string plTxt  = "—";
+   color  plCol  = clrSilver;
+   if(HasPosition())
+     {
+      long   type = PositionGetInteger(POSITION_TYPE);
+      double vol  = PositionGetDouble(POSITION_VOLUME);
+      double prof = PositionGetDouble(POSITION_PROFIT);
+      posTxt = (type == POSITION_TYPE_BUY ? "LONG " : "SHORT ") + DoubleToString(vol, 2) + " lot";
+      posCol = (type == POSITION_TYPE_BUY ? clrLime : clrTomato);
+      plTxt  = DoubleToString(prof, 2) + " " + AccountInfoString(ACCOUNT_CURRENCY);
+      plCol  = prof >= 0 ? clrLime : clrTomato;
+     }
+
+   // spread
+   long spread = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   color spCol = (InpMaxSpreadPts > 0 && spread > InpMaxSpreadPts) ? clrTomato : clrSilver;
+
+   bool algo = (bool)MQLInfoInteger(MQL_TRADE_ALLOWED) &&
+               (bool)TerminalInfoInteger(TERMINAL_TRADE_ALLOWED);
+
+   string tf = StringSubstr(EnumToString((ENUM_TIMEFRAMES)_Period), 7);
+
+   int r = 0;
+   SetPanelLabel("T",  x0, y0 + rh*r, "◆ SMC AUTO TRADER", C'255,210,60', 10); r++;
+   SetPanelLabel("k1", x0, y0 + rh*r, "Instrument", clrSilver, 8);
+   SetPanelLabel("v1", vx, y0 + rh*r, _Symbol + " " + tf, clrWhite, 8); r++;
+   SetPanelLabel("k2", x0, y0 + rh*r, "Trend", clrSilver, 8);
+   SetPanelLabel("v2", vx, y0 + rh*r, trTxt, trCol, 8); r++;
+   SetPanelLabel("k3", x0, y0 + rh*r, "Zona", clrSilver, 8);
+   SetPanelLabel("v3", vx, y0 + rh*r, zoneState, zCol, 8); r++;
+   SetPanelLabel("k4", x0, y0 + rh*r, "Spread", clrSilver, 8);
+   SetPanelLabel("v4", vx, y0 + rh*r, IntegerToString(spread) + " pt", spCol, 8); r++;
+   SetPanelLabel("k5", x0, y0 + rh*r, "Pozitsiya", clrSilver, 8);
+   SetPanelLabel("v5", vx, y0 + rh*r, posTxt, posCol, 8); r++;
+   SetPanelLabel("k6", x0, y0 + rh*r, "Foyda", clrSilver, 8);
+   SetPanelLabel("v6", vx, y0 + rh*r, plTxt, plCol, 8); r++;
+   SetPanelLabel("k7", x0, y0 + rh*r, "Risk/savdo", clrSilver, 8);
+   SetPanelLabel("v7", vx, y0 + rh*r, DoubleToString(InpRiskPercent, 1) + " %", clrWhite, 8); r++;
+   SetPanelLabel("k8", x0, y0 + rh*r, "Algo Trading", clrSilver, 8);
+   SetPanelLabel("v8", vx, y0 + rh*r, algo ? "ON" : "OFF", algo ? clrLime : clrTomato, 8); r++;
+  }
+//+------------------------------------------------------------------+
+//| Panel obyektlarini o'chirish                                     |
+void DeletePanel()
+  {
+   ObjectsDeleteAll(0, PANEL_PREFIX);
   }
 //+------------------------------------------------------------------+
 double GetAtr()
@@ -400,7 +558,13 @@ void CheckEntry()
          sl = NormalizePrice(sl);
          tp = NormalizePrice(tp);
          if(trade.Buy(lots, _Symbol, 0.0, sl, tp, InpComment))
+           {
             zoneTraded = true;
+            DrawEntryArrow(true, ask);
+            Notify(StringFormat("SMC BUY %s @ %s | SL %s | TP %s | %.2f lot",
+                   _Symbol, DoubleToString(ask,_Digits),
+                   DoubleToString(sl,_Digits), DoubleToString(tp,_Digits), lots));
+           }
         }
      }
    //--- BEAR: supply zonaga qaytib, bearish tasdiq shami
@@ -424,7 +588,13 @@ void CheckEntry()
          sl = NormalizePrice(sl);
          tp = NormalizePrice(tp);
          if(trade.Sell(lots, _Symbol, 0.0, sl, tp, InpComment))
+           {
             zoneTraded = true;
+            DrawEntryArrow(false, bid);
+            Notify(StringFormat("SMC SELL %s @ %s | SL %s | TP %s | %.2f lot",
+                   _Symbol, DoubleToString(bid,_Digits),
+                   DoubleToString(sl,_Digits), DoubleToString(tp,_Digits), lots));
+           }
         }
      }
   }
@@ -497,6 +667,15 @@ void OnTick()
   {
    // har tikda ochiq pozitsiyani boshqaramiz (trailing tez ishlashi uchun)
    ManagePosition();
+
+   // pozitsiya yopilishini aniqlash (SL/TP yoki qo'lda)
+   bool nowPos = HasPosition();
+   if(prevHasPos && !nowPos)
+      Notify("SMC: pozitsiya yopildi | " + _Symbol);
+   prevHasPos = nowPos;
+
+   // panelni har tikda yangilaymiz
+   UpdatePanel();
 
    // struktura/kirish faqat yangi bar yopilganda
    datetime bt = iTime(_Symbol, _Period, 0);

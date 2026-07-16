@@ -33,6 +33,16 @@ Narx zonani **qarshi tomonga buzib yopsa (invalidatsiya)** zona `InpBrokenColor`
 (kulrang) ga o'zgaradi va u zonaga endi kirilmaydi. Vizualni `InpDrawZones = false`
 bilan o'chirsa bo'ladi.
 
+### Info-panel (dashboard)
+Grafikning burchagida jonli panel ko'rsatiladi: **Instrument/TF, Trend, Zona holati,
+Spread, Pozitsiya, Foyda, Risk, Algo Trading** holati. Har savdo ochilganda grafikda
+**kirish strelkasi** chiziladi (yashil = Buy, qizil = Sell).
+
+### Bildirishnoma
+Savdo ochilganda va yopilganda **alert** (ekranda) va ixtiyoriy **push** (telefonga)
+yuboriladi. Push ishlashi uchun MT5 → Tools → Options → Notifications da MetaQuotes ID
+kiritilgan bo'lishi kerak.
+
 ### Asosiy parametrlar
 
 | Parametr | Izoh | Standart |
@@ -44,6 +54,9 @@ bilan o'chirsa bo'ladi.
 | `InpUseTrendEMA` / `InpTrendEMA` | EMA trend filtri | true / 200 |
 | `InpMaxSpreadPts` | Maksimal spread (punkt) | 30 |
 | `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
+| `InpShowPanel` | Grafikda info-panel (dashboard) | true |
+| `InpShowEntryArrows` | Kirish strelkalarini chizish | true |
+| `InpAlertPopup` / `InpAlertPush` | Alert / telefonga push | true / false |
 | `InpDrawZones` | Zonalarni grafikda chizish | true |
 | `InpBullZoneColor` / `InpBearZoneColor` | Zona ranglari | Teal / Crimson |
 | `InpRetestColor` | Retest bo'lgan zona rangi | Gold |
