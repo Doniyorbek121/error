@@ -8,6 +8,8 @@ MetaTrader 5 uchun ikkita fayl:
 | `SMC_AutoTrader.mq5` | **Expert Advisor (EA)** | Smart Money Concepts strategiyasi bilan **avtomatik** savdo ochadi/yopadi. |
 | `presets/SMC_XAUUSD_M15.set` | **Preset** | SMC EA uchun XAUUSD M15 ga sozlangan tayyor parametrlar. |
 | `presets/SMC_EURUSD_M15.set` | **Preset** | SMC EA uchun EURUSD M15 ga sozlangan tayyor parametrlar. |
+| `presets/SMC_GBPUSD_M15.set` | **Preset** | SMC EA uchun GBPUSD M15 ga sozlangan tayyor parametrlar. |
+| `presets/SMC_BTCUSD_M15.set` | **Preset** | SMC EA uchun BTCUSD M15 ga sozlangan tayyor parametrlar. |
 
 ---
 
@@ -149,6 +151,49 @@ bir xil (Strategy Tester yoki grafik sozlamasida **Load**).
 > Eslatma: 5-xonali brokerda 1 pip = 10 punkt. Shuning uchun oltin va EURUSD presetlarida
 > `InpMaxSpreadPts` / `InpBElockPts` qiymatlari **punktda** har xil ko'rinadi, lekin ikkalasi
 > ham shu instrumentga mos. SL/TP masofasi ATR asosida bo'lgani uchun avtomatik moslashadi.
+
+---
+
+## Tayyor preset: GBPUSD M15
+
+`presets/SMC_GBPUSD_M15.set` — GBPUSD M15 uchun. GBPUSD EURUSD'dan volatilroq, shuning uchun:
+`InpMaxSpreadPts=30`, `InpTrailATR=1.2`. Qolgani EURUSD bilan o'xshash.
+
+## Tayyor preset: BTCUSD M15
+
+`presets/SMC_BTCUSD_M15.set` — BTCUSD (kripto) M15 uchun. Kripto juda volatil va 24/7,
+shuning uchun ehtiyotkor sozlamalar:
+- `InpRiskPercent=0.5` — risk **yarmiga** kamaytirilgan (volatillik yuqori)
+- `InpMaxSpreadPts=0` — spread tekshiruvi **o'chirilgan** (kripto spredi punktda juda katta bo'lib, savdoni bloklab qo'yishi mumkin)
+- `InpBElockPts=1000`, `InpTrailATR=1.5` — kengroq harakatga moslangan
+- `InpMaxDailyLossPct=5.0` — kunlik limit ayniqsa kriptoda muhim
+
+> ⚠️ Kripto brokerlarda `BTCUSD` digits/point turlicha bo'lishi mumkin — `InpBElockPts` ni
+> o'z brokeringizga qarab moslang (bu faqat break-even qulfi; SL/TP ATR asosida avtomatik).
+
+---
+
+## Strategy Tester natijalarini o'qish
+
+Tester tugagach **Backtest / Results** yorlig'idagi asosiy ko'rsatkichlar:
+
+| Ko'rsatkich | Ma'nosi | Yaxshi oraliq |
+|---|---|---|
+| **Total Net Profit** | Umumiy sof foyda | Musbat bo'lishi shart |
+| **Profit Factor** | Foyda ÷ zarar | > **1.3** yaxshi, > 1.6 kuchli |
+| **Expected Payoff** | O'rtacha bitim natijasi | Musbat |
+| **Recovery Factor** | Foyda ÷ maks. prosadka | > **3** yaxshi |
+| **Maximal Drawdown** | Eng katta pasayish (% / pul) | Qancha kichik shuncha yaxshi (< 20–25%) |
+| **Sharpe Ratio** | Risk-moslangan daromad | > **1** yaxshi |
+| **Total Trades** | Bitimlar soni | Ishonch uchun **kamida ~100** |
+| **Profit Trades %** | G'alaba foizi | RR 2.0 da 40%+ ham foydali bo'ladi |
+
+**Muhim tamoyillar:**
+- **Kam bitim = ishonchsiz.** 10–20 ta bitimdagi 80% g'alaba tasodif bo'lishi mumkin. Ko'proq tarix (1–3 yil) va ko'proq bitimda test qiling.
+- **Modelling quality**: "Every tick based on real ticks" eng aniq; "1 minute OHLC" tez, lekin taxminiy.
+- **Drawdown**'ga profit'dan ko'ra ko'proq e'tibor bering — u sizning real chidamlilik chegarangiz.
+- **Overfitting'dan saqlaning**: parametrlarni tarixга juda mos qilib optimallashtirsangiz, real bozorda ishlamasligi mumkin. Optimallashtirilgan natijani **boshqa davrda (out-of-sample)** qayta tekshiring.
+- G'alaba % past, lekin RR yuqori (2.0) strategiya baribir foydali bo'lishi mumkin — bu normal.
 
 ---
 
