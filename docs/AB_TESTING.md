@@ -139,9 +139,10 @@ Filtr **B** ni **A** bilan solishtirganda:
 
 1. **Kam bitim = ishonchsiz.** Filtr bitimlar sonini keskin kamaytirsa (masalan 200 → 20),
    natija chiroyli ko'rinsa ham unga ishonmang — namuna juda kichik.
-2. **Overfitting.** Bir sana oralig'ida eng zo'r chiqqan sozlamani **boshqa oraliqda**
-   (out-of-sample) qayta sinang. Ikkalasida ham yaxshi bo'lsagina — haqiqiy.
-   - Masalan: 2022–2023 da tanlang, keyin **2024** da tekshiring.
+2. **Overfitting.** Bir sana oralig'ida eng zo'r chiqqan sozlamani **boshqa (yangiroq)
+   oraliqda** (out-of-sample) qayta sinang. Ikkalasida ham yaxshi bo'lsagina — haqiqiy.
+   - Masalan: **2023–2024** da tanlang, keyin **2025–2026** (eng yangi davr) da tekshiring.
+   - Qoida: har doim **eng yangi** ma'lumotni tekshiruvga qoldiring — u real bozorga eng yaqini.
 3. **Bitta simvolga moslama.** XAUUSD'da zo'r sozlama EURUSD'da yomon bo'lishi mumkin —
    har simvolni alohida A/B qiling.
 4. **Modelling quality.** "Open prices only" tez, lekin noaniq. Yakuniy qarorni
