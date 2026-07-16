@@ -45,6 +45,14 @@ input double InpBElockPts      = 5;        // BE qulf (punkt)
 input bool   InpUseTrailing    = true;     // Trailing stop yoqilsinmi
 input double InpTrailATR       = 1.0;      // Trailing masofasi (ATR ulushi)
 
+input group "=== Vizual (zonalarni chizish) ==="
+input bool   InpDrawZones      = true;     // Zonalarni grafikda chizish
+input color  InpBullZoneColor  = clrTeal;  // Bull (demand) zona rangi
+input color  InpBearZoneColor  = clrCrimson; // Bear (supply) zona rangi
+input int    InpZoneExtendBars = 30;       // Zonani o'ngga uzaytirish (bar)
+input int    InpMaxDrawZones   = 12;       // Grafikda saqlanadigan zonalar soni
+input bool   InpZoneFill       = true;     // Zonani to'ldirish (fon)
+
 //====================== GLOBAL O'ZGARUVCHILAR =====================
 CTrade   trade;
 int      hAtr   = INVALID_HANDLE;
@@ -56,6 +64,7 @@ datetime lastBarTime = 0;
 double   swHighPrice = 0.0,  swLowPrice = 0.0;
 double   swHighHi = 0.0, swHighLo = 0.0;   // swing high candle range
 double   swLowHi  = 0.0, swLowLo  = 0.0;   // swing low candle range
+datetime swHighTime = 0, swLowTime = 0;    // swing shami vaqti (chizish uchun)
 bool     haveSH = false, haveSL = false;
 
 // faol zona
@@ -63,6 +72,11 @@ int      trendDir   = 0;      // 1 = bull, -1 = bear, 0 = yo'q
 bool     zoneActive = false;
 double   zoneHi = 0.0, zoneLo = 0.0;
 bool     zoneTraded = false;
+
+// chizilgan zona obyektlari
+string   zoneNames[];         // grafikdagi rectangle nomlari
+long     zoneCounter = 0;     // noyob nom uchun sanagich
+string   ZONE_PREFIX = "SMC_ZONE_";
 
 //+------------------------------------------------------------------+
 int OnInit()
@@ -91,6 +105,63 @@ void OnDeinit(const int reason)
   {
    if(hAtr != INVALID_HANDLE) IndicatorRelease(hAtr);
    if(hEma != INVALID_HANDLE) IndicatorRelease(hEma);
+   DeleteAllZones();
+  }
+//+------------------------------------------------------------------+
+//| Zonani grafikda chizish (rectangle)                              |
+void DrawZone(bool isBull, double hi, double lo, datetime t0)
+  {
+   if(!InpDrawZones) return;
+   string name = ZONE_PREFIX + IntegerToString(zoneCounter++);
+   datetime t1 = TimeCurrent() + (datetime)(InpZoneExtendBars * PeriodSeconds(_Period));
+   color c = isBull ? InpBullZoneColor : InpBearZoneColor;
+
+   if(ObjectCreate(0, name, OBJ_RECTANGLE, 0, t0, hi, t1, lo))
+     {
+      ObjectSetInteger(0, name, OBJPROP_COLOR, c);
+      ObjectSetInteger(0, name, OBJPROP_FILL, InpZoneFill);
+      ObjectSetInteger(0, name, OBJPROP_BACK, true);
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 1);
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+
+      int n = ArraySize(zoneNames);
+      ArrayResize(zoneNames, n + 1);
+      zoneNames[n] = name;
+      PruneZones();
+      ChartRedraw(0);
+     }
+  }
+//+------------------------------------------------------------------+
+//| Eng eski zonalarni cheklovdan oshsa o'chirish                    |
+void PruneZones()
+  {
+   while(ArraySize(zoneNames) > InpMaxDrawZones && ArraySize(zoneNames) > 0)
+     {
+      ObjectDelete(0, zoneNames[0]);
+      for(int i = 0; i < ArraySize(zoneNames) - 1; i++)
+         zoneNames[i] = zoneNames[i + 1];
+      ArrayResize(zoneNames, ArraySize(zoneNames) - 1);
+     }
+  }
+//+------------------------------------------------------------------+
+//| Barcha zona obyektlarini o'chirish                               |
+void DeleteAllZones()
+  {
+   for(int i = ArraySize(zoneNames) - 1; i >= 0; i--)
+      ObjectDelete(0, zoneNames[i]);
+   ArrayResize(zoneNames, 0);
+   ObjectsDeleteAll(0, ZONE_PREFIX); // qolgan izlarni ham tozalash
+  }
+//+------------------------------------------------------------------+
+//| Faol zona chizig'ini o'ngga uzaytirish (yangi barlarda)          |
+void ExtendLastZone()
+  {
+   int n = ArraySize(zoneNames);
+   if(n == 0) return;
+   string name = zoneNames[n - 1];
+   datetime t1 = TimeCurrent() + (datetime)(InpZoneExtendBars * PeriodSeconds(_Period));
+   ObjectSetInteger(0, name, OBJPROP_TIME, 1, t1);
   }
 //+------------------------------------------------------------------+
 double GetAtr()
@@ -194,6 +265,7 @@ void UpdateStructure()
       swHighPrice = iHigh(_Symbol, _Period, s);
       swHighHi    = iHigh(_Symbol, _Period, s);
       swHighLo    = iLow(_Symbol, _Period, s);
+      swHighTime  = iTime(_Symbol, _Period, s);
       haveSH = true;
      }
    // yangi swing low
@@ -202,6 +274,7 @@ void UpdateStructure()
       swLowPrice = iLow(_Symbol, _Period, s);
       swLowHi    = iHigh(_Symbol, _Period, s);
       swLowLo    = iLow(_Symbol, _Period, s);
+      swLowTime  = iTime(_Symbol, _Period, s);
       haveSL = true;
      }
 
@@ -217,6 +290,7 @@ void UpdateStructure()
          zoneLo = swLowLo;
          zoneActive = true;
          zoneTraded = false;
+         DrawZone(true, zoneHi, zoneLo, swLowTime);
         }
       haveSH = false; // shu breakni qayta ishlatmaslik uchun
      }
@@ -230,6 +304,7 @@ void UpdateStructure()
          zoneLo = swHighLo;
          zoneActive = true;
          zoneTraded = false;
+         DrawZone(false, zoneHi, zoneLo, swHighTime);
         }
       haveSL = false;
      }
@@ -383,5 +458,6 @@ void OnTick()
 
    UpdateStructure();
    CheckEntry();
+   if(InpDrawZones) ExtendLastZone();
   }
 //+------------------------------------------------------------------+

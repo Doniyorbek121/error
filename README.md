@@ -25,6 +25,10 @@ MetaTrader 5 uchun ikkita fayl:
 3. **Kirish** — narx trend yo'nalishida shu zonaga qaytib (retest) tasdiq shami bergganda savdo ochiladi.
 4. **Chiqish** — SL/TP, ixtiyoriy Break-Even va Trailing Stop.
 
+Aniqlangan **Order Block zonalar** grafikda to'rtburchak (rectangle) sifatida chiziladi —
+bull (demand) yashil, bear (supply) qizil. Zonalar o'ngga proyeksiya qilinadi va soni
+`InpMaxDrawZones` bilan cheklanadi. Vizualni `InpDrawZones = false` bilan o'chirsa bo'ladi.
+
 ### Asosiy parametrlar
 
 | Parametr | Izoh | Standart |
@@ -36,6 +40,10 @@ MetaTrader 5 uchun ikkita fayl:
 | `InpUseTrendEMA` / `InpTrendEMA` | EMA trend filtri | true / 200 |
 | `InpMaxSpreadPts` | Maksimal spread (punkt) | 30 |
 | `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
+| `InpDrawZones` | Zonalarni grafikda chizish | true |
+| `InpBullZoneColor` / `InpBearZoneColor` | Zona ranglari | Teal / Crimson |
+| `InpZoneExtendBars` | Zonani o'ngga uzaytirish (bar) | 30 |
+| `InpMaxDrawZones` | Grafikda saqlanadigan zonalar soni | 12 |
 
 ---
 
