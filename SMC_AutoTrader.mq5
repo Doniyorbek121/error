@@ -6,7 +6,7 @@
 //|  kafolati YO'Q. Har doim avval DEMO hisobda sinang.              |
 //+------------------------------------------------------------------+
 #property copyright "SMC_AutoTrader"
-#property version   "1.10"
+#property version   "1.11"
 #property description "Market Structure (BOS) + Order Block retest; ADX/RSI/MTF filtrlar, risk-menejment."
 #property strict
 
@@ -798,7 +798,8 @@ void UpdateStructure()
    if(haveSH && lastClose > swHighPrice)
      {
       trendDir   = 1;
-      if(haveSL)
+      zoneActive = false; // yo'nalish o'zgardi — eski (qarama-qarshi) zonani bekor qilamiz
+      if(haveSL)          // demand zona uchun manba swing low bo'lsa — yangi zona
         {
          zoneHi = swLowHi;
          zoneLo = swLowLo;
@@ -812,7 +813,8 @@ void UpdateStructure()
    if(haveSL && lastClose < swLowPrice)
      {
       trendDir   = -1;
-      if(haveSH)
+      zoneActive = false; // yo'nalish o'zgardi — eski (qarama-qarshi) zonani bekor qilamiz
+      if(haveSH)          // supply zona uchun manba swing high bo'lsa — yangi zona
         {
          zoneHi = swHighHi;
          zoneLo = swHighLo;
@@ -886,6 +888,8 @@ void CheckEntry()
                    _Symbol, DoubleToString(ask,_Digits),
                    DoubleToString(sl,_Digits), DoubleToString(tp,_Digits), lots));
            }
+         else
+            Print("BUY xato: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
         }
      }
    //--- BEAR: supply zonaga qaytib, bearish tasdiq shami
@@ -919,6 +923,8 @@ void CheckEntry()
                    _Symbol, DoubleToString(bid,_Digits),
                    DoubleToString(sl,_Digits), DoubleToString(tp,_Digits), lots));
            }
+         else
+            Print("SELL xato: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
         }
      }
   }

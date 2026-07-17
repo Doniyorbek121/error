@@ -15,6 +15,7 @@ MetaTrader 5 uchun ikkita fayl:
 | `presets/SMC_XAUUSD_H1.set` | **Preset** | SMC EA uchun XAUUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
 | `presets/SMC_EURUSD_H1.set` | **Preset** | SMC EA uchun EURUSD H1 (HTF = H4) ga sozlangan tayyor parametrlar. |
 | `docs/AB_TESTING.md` | **Qo'llanma** | Filtrlarni A/B taqqoslash (Strategy Tester) usuli. |
+| `docs/УСТАНОВКА_RU.md` | **Руководство** | Установка на MT5 — пошагово на русском языке. |
 
 ---
 
