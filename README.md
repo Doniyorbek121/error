@@ -110,6 +110,8 @@ chiqsa (ya'ni minimal lot belgilangan `InpRiskPercent`'dan ko'proq risk qilardi)
 | `InpSkipIfOverRisk` | Risk oshsa savdoni o'tkazib yuborish | true |
 | `InpMaxSpreadPts` | Maksimal spread (punkt) | 30 |
 | `InpUseBreakEven` / `InpUseTrailing` | Pozitsiyani boshqarish | true / true |
+| `InpCloseOnOppositeBOS` | Teskari BOS'da savdoni yopish (SMC mantig'i) | true |
+| `InpUseTimeExit` / `InpMaxBarsInTrade` | Vaqt bo'yicha chiqish | false / 50 |
 | `InpUsePartial` | TP1 da qisman yopish | true |
 | `InpPartialTPfrac` / `InpPartialPct` | TP1 masofasi / yopiladigan hajm % | 0.5 / 50 |
 | `InpUseDailyLimit` / `InpMaxDailyLossPct` | Kunlik zarar limiti | true / 5% |

@@ -6,7 +6,7 @@
 //|  kafolati YO'Q. Har doim avval DEMO hisobda sinang.              |
 //+------------------------------------------------------------------+
 #property copyright "SMC_AutoTrader"
-#property version   "1.11"
+#property version   "1.12"
 #property description "Market Structure (BOS) + Order Block retest; ADX/RSI/MTF filtrlar, risk-menejment."
 #property strict
 
@@ -63,6 +63,11 @@ input double InpBEtriggerR     = 1.0;      // BE ishga tushishi (R foyda)
 input double InpBElockPts      = 5;        // BE qulf (punkt)
 input bool   InpUseTrailing    = true;     // Trailing stop yoqilsinmi
 input double InpTrailATR       = 1.0;      // Trailing masofasi (ATR ulushi)
+
+input group "=== Chiqish qoidalari (qo'shimcha) ==="
+input bool   InpCloseOnOppositeBOS = true; // Teskari BOS'da savdoni yopish (SMC mantig'i)
+input bool   InpUseTimeExit    = false;    // Vaqt bo'yicha chiqish yoqilsinmi
+input int    InpMaxBarsInTrade = 50;       // Savdo shuncha bardan uzoq ochiq qolsa yopiladi
 
 input group "=== Vizual (zonalarni chizish) ==="
 input bool   InpDrawZones      = true;     // Zonalarni grafikda chizish
@@ -798,6 +803,7 @@ void UpdateStructure()
    if(haveSH && lastClose > swHighPrice)
      {
       trendDir   = 1;
+      CloseOppositePosition(1); // teskari (SELL) savdo bo'lsa yopamiz
       zoneActive = false; // yo'nalish o'zgardi — eski (qarama-qarshi) zonani bekor qilamiz
       if(haveSL)          // demand zona uchun manba swing low bo'lsa — yangi zona
         {
@@ -813,6 +819,7 @@ void UpdateStructure()
    if(haveSL && lastClose < swLowPrice)
      {
       trendDir   = -1;
+      CloseOppositePosition(-1); // teskari (BUY) savdo bo'lsa yopamiz
       zoneActive = false; // yo'nalish o'zgardi — eski (qarama-qarshi) zonani bekor qilamiz
       if(haveSH)          // supply zona uchun manba swing high bo'lsa — yangi zona
         {
@@ -823,6 +830,34 @@ void UpdateStructure()
          DrawZone(false, zoneHi, zoneLo, swHighTime);
         }
       haveSL = false;
+     }
+  }
+//+------------------------------------------------------------------+
+//| Teskari BOS'da ochiq savdoni yopish (SMC mantig'i)               |
+void CloseOppositePosition(int newDir)
+  {
+   if(!InpCloseOnOppositeBOS) return;
+   if(!HasPosition()) return;
+   long type = PositionGetInteger(POSITION_TYPE);
+   if((newDir == 1 && type == POSITION_TYPE_SELL) ||
+      (newDir == -1 && type == POSITION_TYPE_BUY))
+     {
+      if(trade.PositionClose(_Symbol))
+         Notify("SMC: teskari BOS — savdo yopildi | " + _Symbol);
+     }
+  }
+//+------------------------------------------------------------------+
+//| Vaqt bo'yicha chiqish: savdo juda uzoq ochiq qolsa               |
+void CheckTimeExit()
+  {
+   if(!InpUseTimeExit || !HasPosition()) return;
+   datetime opened = (datetime)PositionGetInteger(POSITION_TIME);
+   int secs = (int)(TimeCurrent() - opened);
+   int barsIn = secs / PeriodSeconds(_Period);
+   if(barsIn >= InpMaxBarsInTrade)
+     {
+      if(trade.PositionClose(_Symbol))
+         Notify(StringFormat("SMC: vaqt bo'yicha yopildi (%d bar) | %s", barsIn, _Symbol));
      }
   }
 //+------------------------------------------------------------------+
@@ -1005,8 +1040,9 @@ void OnTick()
       dailyTrades = 0; // yangi kun — savdo hisobini nolga tushiramiz
      }
 
-   // partial close (TP1) va pozitsiyani boshqarish
+   // partial close (TP1), vaqt bo'yicha chiqish va pozitsiyani boshqarish
    ManagePartial();
+   CheckTimeExit();
    ManagePosition();
 
    // pozitsiya ochilishi/yopilishini aniqlash
